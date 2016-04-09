@@ -1,0 +1,44 @@
+# This file is part of Geoff's Sound Change Applier, version 0.8
+# (August 2010). You can obtain the latest version of this program
+# from http://gesc19764.pwp.blueyonder.co.uk/sca.html
+
+# This file specifies the special characters and their meanings in
+# rules. When parsing a rule, if a character is a key here, the
+# function "add_" + type is called.
+
+# The escape character; DO NOT CHANGE IT
+
+"\\": { type: "escape" }
+
+# These characters need to be scaped; DO NOT CHANGE THEM
+
+"'":  { type: "special" }
+'"':  { type: "special" }
+'(':  { type: "special" }
+')':  { type: "special" }
+
+'-':  { type: "index" }
+'1':  { type: "index" }
+'2':  { type: "index" }
+'3':  { type: "index" }
+'4':  { type: "index" }
+'5':  { type: "index" }
+'6':  { type: "index" }
+'7':  { type: "index" }
+'8':  { type: "index" }
+'9':  { type: "index" }
+
+'#':  { type: "anchor" }
+
+'0':  { type: "zero" }
+
+'%':  { type: "part" }
+
+# Anything up to the 'close' character gets converted to an object of
+# class "SCA" + class.
+
+'<':  { type: "delim", close: '>', class: 'Category' }
+'{':  { type: "delim", close: '}', class: 'Blend' }
+'[':  { type: "delim", close: ']', class: 'Feature' }
+'~':  { type: "delim", close: '~', class: 'List' }
+'$':  { type: "delim", close: '$', class: 'String' }

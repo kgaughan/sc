@@ -1,0 +1,34 @@
+# This file is part of Geoff's Sound Change Applier, version 0.8
+# (August 2010). You can obtain the latest version of this program
+# from http://gesc19764.pwp.blueyonder.co.uk/sca.html
+
+# This file specifies the parameters which particular directives
+# expect.
+
+"assert":
+ - { name: "dialect", type: "string" }
+ - { name: "word",    type: "string" }
+ - { name: "result",  type: "string" }
+
+"include":
+ - { name: "file",  type: "string" }
+
+"exception":
+ - { name: "rule",     type: "string" }
+ - { name: "word",     type: "string" }
+ - { name: "dialects", type: "string", default: "None" }
+
+"exceptfile":
+ - { name: "file",  type: "string" }
+
+"dirprefix":
+ - { name: "dialects",  type: "string" }
+
+"skipif":
+ - { name: "cond",  type: "string" }
+
+"skipunless":
+ - { name: "cond",  type: "string" }
+
+"seed":
+ - { name: "value",  type: "string" }

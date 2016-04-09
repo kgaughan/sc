@@ -1,0 +1,504 @@
+# This file is part of Geoff's Sound Change Applier, version 0.8
+# (August 2010). You can obtain the latest version of this program
+# from http://gesc19764.pwp.blueyonder.co.uk/sca.html
+
+# This file contains tests to make sure SCA works properly. It is used
+# by SCAtest.py.
+
+##############################################################################
+
+# Definitions
+
+"cats":
+  - { name: "ustop",  def: "ptk" }
+  - { name: "vstop",  def: "bdg" }
+  - { name: "ufric",  def: "fsh" }
+  - { name: "vfric",  def: "vzG" }
+  - { name: "nasal",  def: "mnq" }
+  - { name: "liquid", def: "lr" }
+  - { name: "vowel",  def: "ieaou" }
+  - { name: "T",      def: "ustop vstop" }
+  - { name: "F",      def: "ufric vzG" }
+  - { name: "N",      def: "nasal" }
+  - { name: "S",      def: "sz" }
+  - { name: "V",      def: "vowel" }
+  - { name: "L",      def: "liquid" }
+  - { name: "X",      def: "IEAOU" }
+  - { name: "front",  def: "ie" }
+
+"strings":
+  - { name: "foo",  def: "bar" }
+  - { name: "bar",  def: "baz" }
+  - { name: "baz",  def: "quux" }
+  - { name: "quux", def: "exp" }
+  - { name: "exp",  def: "this string has spaces" }
+
+"lists":
+  - { name: "idip", def: "ai,ei,oi" }
+  - { name: "foo",  def: "$foo,$bar,$baz,$quux" }
+
+"features":
+  - { name: "voice1", def: "ustop ufric | vstop vfric" }
+  - { name: "voice2", def: "ptk f s h | b d g vz G" }
+  - { name: "fric",   def: "ustop vstop | ufric vfric" }
+
+##############################################################################
+
+# Rules
+#
+# For each pair of words in _test_, we expect that _rule_ applied to
+# the first word will give the second.
+
+"rules":
+  - rule: "a b _"
+    name: "Simple replacement"
+    test:
+    - [ "caad", "cbbd" ]
+    - [ "cad",  "cbd" ]
+    - [ "cd",   "cd" ]
+    - [ "acada", "bcbdb" ]
+
+  # Quantifiers
+
+  - rule: "a+ b c_d"
+    name: "1 or more"
+    test:
+    - [ "caad", "cbd" ]
+    - [ "cad",  "cbd" ]
+    - [ "cd",   "cd" ]
+
+  - rule: "a* b c_d"
+    name: "0 or more"
+    test:
+    - [ "caad", "cbd" ]
+    - [ "cad",  "cbd" ]
+    - [ "cd",   "cbd" ]
+
+  - rule: "T* 0 _#"
+    name: "0 or more again"
+    test:
+    - [ "caad", "caa" ]
+    - [ "galakt", "gala" ]
+
+  - rule: "a? b c_d"
+    name: "0 or 1"
+    test:
+    - [ "caad", "caad" ]
+    - [ "cad",  "cbd" ]
+    - [ "cd",   "cbd" ]
+
+  - rule: ". b c_d"
+    name: "Any"
+    test:
+    - [ "caad", "caad" ]
+    - [ "cad",  "cbd" ]
+    - [ "cd",   "cd" ]
+
+  # Zeros 
+
+  - rule: "Th F _"
+    name: "Zeros 1"
+    test:
+    - [ "apha",  "afa" ]
+
+  - rule: "F Th _"
+    name: "Zeros 2"
+    test:
+    - [ "afa",  "apha" ]
+
+  - rule: "hT 0F _"
+    name: "Zeros 3"
+    test:
+    - [ "ahpa",  "afa" ]
+
+  - rule: "0F hT _"
+    name: "Zeros 4"
+    test:
+    - [ "afa",  "ahpa" ]
+
+  - rule: "0 b c_d"
+    name: "Zeros in BEFORE"
+    test:
+    - [ "cad",  "cad" ]
+    - [ "cd",   "cbd" ]
+
+  - rule: "b 0 c_d"
+    name: "Zeros in AFTER"
+    test:
+    - [ "cbad", "cbad" ]
+    - [ "cbd",  "cd" ]
+
+  - rule: "0 b c_"
+    name: "Zeros in PRE"
+    test:
+    - [ "caca", "cbacba" ]
+
+  - rule: "0 b _c"
+    name: "Zeros in POST"
+    test:
+    - [ "caca", "bcabca" ]
+
+  - rule: "<ustop> <+vd0> _"
+    name: "Zeros in replacement categories"
+    test:
+    - [ "apa", "ava" ]
+    - [ "ata", "ada" ]
+    - [ "aka", "aa" ]
+
+  - rule: "<ustop> <+vd> _"
+    name: "Implied zeros in replacement categories"
+    test:
+    - [ "apa", "ava" ]
+    - [ "ata", "ada" ]
+    - [ "aka", "aa" ]
+
+  # Flags
+
+  - rule: "a b c_c"
+    name: "Banana problem 1"
+    test:
+    - [ "cacacacac", "cbcacbcac" ]
+    - [ "caccaccac", "cbccbccbc" ]
+
+  - rule: "a b c_c B"
+    name: "Banana problem 2"
+    test:
+    - [ "cacacacac", "cbcbcbcbc" ]
+    - [ "caccaccac", "cbccbccbc" ]
+
+  - rule: "a b c_c R"
+    name: "Reverse banana problem 1"
+    test:
+    - [ "cacacac",   "cbcbcbc" ]
+    - [ "caccaccac", "cbccbccbc" ]
+
+  - rule: "a b c_c F"
+    name: "Match first only"
+    test:
+    - [ "cacacac",   "cbcacac" ]
+    - [ "cbcacac",   "cbcbcac" ]
+
+  - rule: "a b c_c L"
+    name: "Match last only"
+    test:
+    - [ "cacacac",   "cacacbc" ]
+    - [ "cacacbc",   "cacbcbc" ]
+
+  # Escaping
+
+  - rule: "\\. b c_d"
+    name: "Escaping 1"
+    test:
+    - [ "cad", "cad" ]
+    - [ "c.d", "cbd" ]
+    - [ "cd",  "cd" ]
+
+  - rule: "\\\\ / _" # this actually contains only two backslashes
+    name: "Escaping 2"
+    test:
+    - [ "\\path\\to\\item", "/path/to/item" ]
+
+  # Anchors
+
+  - rule: "a b #|c_d"
+    name: "anchor and alternation 1"
+    test:
+    - [ "cad", "cbd" ]
+    - [ "ad",  "bd" ]
+    - [ "ead", "ead" ]
+
+  - rule: "a b c_d|#"
+    name: "anchor and alternation 2"
+    test:
+    - [ "cad", "cbd" ]
+    - [ "ad",  "ad" ]
+    - [ "ca",  "cb" ]
+
+  # Categories
+
+  - rule: "<ustop> <vstop> <vowel>_a"
+    name: "Category matching 1"
+    test:
+    - [ "ata", "ada" ]
+    - [ "ada", "ada" ]
+
+  - rule: "<ustop> <ufric> <vowel>_e"
+    name: "Category matching 2"
+    test:
+    - [ "ate", "ase" ]
+
+  - rule: "T F <vowel>_i"
+    name: "Category matching 3 (single letter)"
+    test:
+    - [ "abi", "avi" ]
+
+  - rule: "<nasal><ustop> <2vstop> <vowel>_o"
+    name: "Category mapping 1"
+    test:
+    - [ "anto", "ado" ]
+
+  - rule: "<nasal><ustop> <2vstop><1vfric> <vowel>_o"
+    name: "Category mapping 2"
+    test:
+    - [ "anpo", "abzo" ]
+
+  - rule: "<NS> x V_V"
+    name: "Category mapping 3"
+    test:
+    - [ "asa", "axa" ]
+    - [ "ama", "axa" ]
+    - [ "ata", "ata" ]
+
+  - rule: "<NS> <SN> V_V"
+    name: "Category mapping 4; silly"
+    test:
+    - [ "asa", "ana" ]
+    - [ "ama", "asa" ]
+    - [ "ata", "ata" ]
+
+  - rule: "<nasal+t> x a_a"
+    name: "Augmented category mapping 1"
+    test:
+    - [ "ata", "axa" ]
+
+  - rule: "<nasal+vstop> x a_a"
+    name: "Augmented category mapping 2"
+    test:
+    - [ "ata", "ata" ]
+    - [ "ada", "axa" ]
+    - [ "ana", "axa" ]
+
+  - rule: "<+ae> x n_n"
+    name: "Augmented category mapping 3"
+    test:
+    - [ "nan", "nxn" ]
+    - [ "nen", "nxn" ]
+    - [ "non", "non" ]
+
+  - rule: "<vowel-front> x n_n"
+    name: "Diminished category mapping 1"
+    test:
+    - [ "nan", "nxn" ]
+    - [ "nen", "nen" ]
+
+  - rule: "<nasal-m> x a_a"
+    name: "Diminished category mapping 2"
+    test:
+    - [ "ama", "ama" ]
+    - [ "ana", "axa" ]
+
+  - rule: "<^nasal> x a_a"
+    name: "Complementation 1"
+    test:
+    - [ "ama", "ama" ]
+    - [ "ada", "axa" ]
+
+  - rule: "<-mn> x a_a"
+    name: "Complementation 2"
+    test:
+    - [ "ama", "ama" ]
+    - [ "ada", "axa" ]
+
+  - rule: "<+abcde> <+xyz> _"
+    name: "Categories, different lengths 1"
+    test:
+    - [ "debacle", "yxzl" ]
+
+  - rule: "<+abc> <+vwxyz> _"
+    name: "Categories, different lengths 2"
+    test:
+    - [ "debacle", "dewvxle" ]
+
+  - rule: "<+abcde> <+xxyyz> _"
+    name: "Duplicates in categories 1"
+    test:
+    - [ "debacle", "yzxxylz" ]
+
+  - rule: "<+abbcde> <+xxyyzz> _"
+    name: "Duplicates in categories 2"
+    test:
+    - [ "debacle", "zzxxylz" ]
+
+  - rule: "<+abcde> <+x0y0z> _"
+    name: "Deleting fron categories"
+    test:
+    - [ "debacle", "zxylz" ]
+
+  # Indexing
+
+  - rule: "TFN 231 a_e"
+    name: "Indexing 1"
+    test:
+    - [ "athme", "ahmte" ]
+
+  - rule: "TFN -2-3-1 a_e"
+    name: "Indexing 2"
+    test:
+    - [ "athme", "ahtme" ]
+
+  - rule: "<nasal><ustop> 21 u_u"
+    name: "Indexing 3"
+    test:
+    - [ "untu", "utnu" ]
+
+  - rule: "<nasal><ustop> 2a1 u_u"
+    name: "Indexing 4"
+    test:
+    - [ "untu", "utanu" ]
+
+  # Not sure what to call these
+
+  - rule: "N x %_"
+    name: "BEFORE in PRE"
+    test:
+    - [ "anno", "anxo" ]
+
+  - rule: "N x _%"
+    name: "BEFORE in POST"
+    test:
+    - [ "anno", "axno" ]
+
+  - rule: "N x <vowel>_<"
+    name: "PRE in POST"
+    test:
+    - [ "ana", "axa" ]
+    - [ "ano", "ano" ]
+
+  - rule: "n < <vowel>_<vowel>"
+    name: "PRE in AFTER"
+    test:
+    - [ "ane", "aae" ]
+
+  - rule: "n > <vowel>_<vowel>"
+    name: "POST in AFTER"
+    test:
+    - [ "ane", "aee" ]
+
+  # Lists and strings
+
+  - rule: "~ai,ei,oi~ ~e,i,y~ T_T"
+    name: "List replacement"
+    test:
+    - [ "tait", "tet" ]
+
+  - rule: "$foo$ $baz$ _"
+    name: "Strings 1"
+    test:
+    - [ "barbarian", "quuxquuxian" ]
+
+  - rule: "$foo$ $exp$ _"
+    name: "Strings 2"
+    test:
+    - [ "xbarx", "xthis string has spacesx" ]
+
+  - rule: "<+abcd> ~foo~ _"
+    name: "cat to list"
+    test:
+    - [ "a b c d", "bar baz quux exp" ]
+
+  - rule: "~ai,ei,oi~ <+eiy> _"
+    name: "string to cat"
+    test:
+    - [ "daireit", "derit" ]
+
+  # Features
+
+  - rule: "[-voice1] [+voice1] V_V"
+    name: "Features 1"
+    test:
+    - [ "kata", "kada" ]
+
+  - rule: "[-voice1,-fric] [+voice1,+fric] V_V"
+    name: "Features 2"
+    test:
+    - [ "kata", "kaza" ]
+    - [ "kada", "kada" ]
+
+  - rule: "[-voice2] [+voice2] V_V"
+    name: "Features 3"
+    test:
+    - [ "kata", "kada" ]
+
+  # Blends
+
+  - rule: "<nasal> {:>} _<ustop>"
+    name: "Blends 1"
+    test:
+    - [ "anpo", "ampo" ]
+
+  - rule: "<nasal> {>:} _<ustop>"
+    name: "Blends 2"
+    test:
+    - [ "anpo", "atpo" ]
+
+  - rule: "0 {vstop:<} N_L"
+    name: "Blends 3"
+    test:
+    - [ "anro", "andro" ]
+
+  - rule: "NL 1{vstop:}2 _"
+    name: "Blends 4"
+    test:
+    - [ "anro", "andro" ]
+
+  - rule: "0 {vstop:>} L_N"
+    name: "Blends 5"
+    test:
+    - [ "arno", "ardno" ]
+
+  - rule: "LN 1{vstop:2}2 _"
+    name: "Blends 6"
+    test:
+    - [ "arno", "ardno" ]
+
+  - rule: "<ustop> {:<} <nasal>_"
+    name: "Blends 7"
+    test:
+    - [ "anpo", "anto" ]
+
+  - rule: "<ustop> {<:} <nasal>_"
+    name: "Blends 8"
+    test:
+    - [ "anpo", "anmo" ]
+
+  - rule: "0 {>:<} <nasal>_<ustop>"
+    name: "Blends 9"
+    test:
+    - [ "amto", "ampto" ]
+
+  - rule: "0 {<:>} <nasal>_<ustop>"
+    name: "Blends 10"
+    test:
+    - [ "amto", "amnto" ]
+
+  - rule: "<nasal><ustop> {1:2}2 _"
+    name: "Blends 11"
+    test:
+    - [ "anpo", "ampo" ]
+
+  - rule: "<nasal><ustop> {2:1}2 _"
+    name: "Blends 12"
+    test:
+    - [ "anpo", "atpo" ]
+
+  - rule: "<nasal><ustop> 1{2:1} _"
+    name: "Blends 13"
+    test:
+    - [ "anpo", "anto" ]
+
+  - rule: "<nasal><ustop> 1{1:2} _"
+    name: "Blends 14"
+    test:
+    - [ "anpo", "anmo" ]
+
+  - rule: "<nasal><ustop> 1{2:1}2 _"
+    name: "Blends 15"
+    test:
+    - [ "amto", "ampto" ]
+
+  - rule: "<nasal><ustop> 1{1:2}2 _"
+    name: "Blends 16"
+    test:
+    - [ "amto", "amnto" ]
+
+##############################################################################

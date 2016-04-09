@@ -1,0 +1,75 @@
+# This file is part of Geoff's Sound Change Applier, version 0.8
+# (August 2010). You can obtain the latest version of this program
+# from http://gesc19764.pwp.blueyonder.co.uk/sca.html
+
+# This file contains details of all the oommand-line parameters for
+# the SCApply.py script.
+
+version: "Geoff's SCA version 0.8"
+
+# File arguments
+
+c: { long: scfile, help: file with sound changes }
+
+l: { long: lexfile, help: input file with words to process }
+
+t: { long: testfile, help: test file for checking rules }
+
+x: { long: excfile, help: file of exceptions }
+
+o: { long: outfile, help: output file }
+
+# Boolean arguments
+
+i: { long: showdefs, type: bool_true, help: show all definitions and exit }
+
+q: { long: quiet, type: bool_true, help: suppress startup banner }
+
+v: { long: verbose, type: bool_true, help: show verbose output }
+
+A: { long: doassert, type: bool_true, help: do assertions }
+
+m: { long: minimal, type: bool_true, help: minimalistic output }
+
+r: { long: rules, type: bool_true, help: show rules as input }
+
+R: { long: regexp, type: bool_true, help: show rules as regexps }
+
+a: { long: all, type: bool_true, help: show all rules }
+
+C: { long: colour, type: bool_true,
+     help: colour output (needs an ANSI-compatible terminal) }
+
+n: { long: showlines, type: bool_true, help: show input line of each rule }
+
+H: { long: header, type: bool_true,
+     help: treat first line of input as a header}
+
+# FIXME: need an option for the file and group, too
+
+# String arguments
+
+d: { long: dialects, help: the dialects to generate output for }
+
+e: { long: encoding, help: the encoding to use,
+     default = utf-8 }
+
+f: { long: fields, help: fields to use in input file }
+
+F: { long: insep, help: separator for input file }
+
+s: { long: sep, help: separator for output }
+
+# Integer arguments
+
+S: { long: seed, help: seed for random numbers }
+
+L: { long: level, type: int, help: level of headings to show,
+     default = 0 }
+
+w: { long: width, type: int, help: field width for output file }
+
+# Others
+
+D: { long: define, type: callback, func: define, argtype: string,
+     help: set a variable to a value }

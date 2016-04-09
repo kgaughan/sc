@@ -59,7 +59,7 @@ cons     = notg glide
 
 ##############################################################################
 
-SKIP
+!skip
 
 # Vowels as per IPA
 
@@ -88,7 +88,7 @@ front   = ufront rfront
 central = ucentral rcentral
 back    = uback rback
 
-NOSKIP
+!noskip
 
 ##############################################################################
 
@@ -164,12 +164,15 @@ L = liquid
 G = glide
 T = stop
 F = fric
+S = sib
 
 P = labial
 Ṕ = labpal
+D = dentalv
+Č = palalv
+Ḱ = pal
 K = velar
 Q = uvular
-S = sib
 
 Ᾰ = short
 Ά = acute

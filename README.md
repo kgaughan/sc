@@ -1,217 +1,237 @@
 Geoff's Sound Change Applier
 ============================
 
-Last update: 16 March 2009 (version 0.5)
+Last update: 31 August 2010 (version 0.8)
+
+Contents
+--------
+
+-   [About SCA](#about)
+-   [Rules and terminology](#rules)
+-   [Higher-level processing](#hlp)
+-   [Command-line options](#clopts)
+-   [Converting from older versions](#conv)
+-   [Sample rules](#sample)
 
 About SCA
 ---------
 
 Geoff's Sound Change Applier, **SCA** hereafter, is a program which
-applies rule-based transformations to strings of Unicode text. It uses
-[Python](http://www.python.org), which you'll need to install to be able
-to use it; most Linices should have it already installed.
+applies rule-based transformations to strings of Unicode text. It is
+written in [Python](http://www.python.org) and uses configuration files
+in [YAML](http://yaml.org/), so you'll need to install Python (SCA is
+known to work with version 2.6, but probably won't with 3.x) and
+[PyYAML](pyyaml.org) to be able to use it.
 
 SCA was originally written as an aid for linguists and conlangers to
 simulate the effects of the Neo-grammarian concept of sound-change and
 is accordingly oriented towards this use, although it should be usable
-for any similar non-linguistic task. It was originally based on [a C
-program written by Mark Rosenfelder](http://www.zompist.com/sounds.htm),
-which is fine for what it does, but I needed something more powerful for
-my porpoises, which frequently require one word to be converted into
-several descendants simultaneously. I recommend reading the
-documentation for his program anyway, since although it works somewhat
-differently from mine, many of the underlying concepts and principles
-are the same.
+for any similar non-linguistic task. You can, for example, very easily
+write [L-systems](http://en.wikipedia.org/wiki/L-system) in it. It was
+originally based on [a C program written by Mark
+Rosenfelder](http://www.zompist.com/sounds.htm), which is fine for what
+it does, but I needed something more powerful for my porpoises, which
+frequently require one word to be converted into several descendants
+simultaneously. I recommend reading the documentation for his program
+anyway, since although it works somewhat differently from mine, many of
+the underlying concepts and principles are the same.
 
-SCA works well enough for me, and while I hope it will be found useful,
-I can't guarantee that it will be suitable for your requirements; if
-you've any comments or suggestions for improvements, let me know. It
-works with Python 2.4 and 2.51, but not 1.5, for example.
+For version 0.8, SCA has been completely redesigned and rewritten. It is
+not completely compatible with earlier versions; a section in this file
+explains what to do to convert .sc files which used to work.
 
-New features in version 0.5 are marked accordingly. Features which are
-described as "deprecated" will not be supported for much longer, and you
-are advised to convert any existing files which use them.
-
-Downloading
------------
+### Getting SCA
 
 All of the necessary files are stored in this repository:
 
--   **scdefs.py scconv.py scrule.py sc.py sc\_apply.py**: The python
+-   **SCAdefs.py SCAitem.py SCArule.py SCA.py SCApply.py**: The Python
     implementation.
+-   **SCAchars.yaml SCAdirparams.yaml SCAparams.yaml**: The YAML
+    configuration files. Don't edit these unless you are absolutely sure
+    you have a good reason for doing so.
+-   **SCAtest.py SCAtest.yaml**: a test suite. You can safely ignore
+    this, but you're still welcome to add tests to it.
 -   **README.md**: a copy of this file.
--   **spanish.sc**: sample file with very approximate sound changes from
-    Latin to Spanish. It is most definitely *not* guaranteed to be
+-   **spanish.sca**: sample file with very approximate sound changes
+    from Latin to Spanish. It is most definitely *not* guaranteed to be
     authoritative!
--   **ipa.sc**: some definitions for use with IPA symbols.
--   **sc-mode.el**: syntax highlighting mode for GNU Emacs.
+-   **ipa.sca**: some definitions for use with IPA symbols.
 
-Using SCA
----------
+### Licensing and re-use
 
-SCA is invoked from the command-line like this:
+I can't guarantee that SCA will be suitable for your requirements, but
+if you use it and find it helpful, I'd love to know. I'd also be
+interested to hear about any suggestions you have for future
+improvements and any bugs which you may have found.
 
-    python sc_apply.py -c<sc-file> [arguments] <words>
+You may do what you like with SCA, free of charge, including using its
+code in something of your own; if you want to know how to do this, and
+can't figure it out from the code, just ask me for the details. I only
+ask that you credit me and link to this page if you use SCA for anything
+you publish, whether software or output: share and enjoy, don't steal
+credit for something you didn't create. Something like "Output generated
+by [Geoff's SCA](http://gesc19764.pwp.blueyonder.co.uk/sca.html)" will
+do fine.
 
-**sc-file** is the name of the "rule file", which contains the change
-rules; you must specify this, or the program won't work. You can use
-`--scfile=` instead of `-c` if you prefer. The filename should end with
-".sc"; this extension can be omitted from the command-line. The format
-of the file is described below.
+Rules and terminology
+---------------------
 
-**words** are the words to process, separated by spaces. If no words are
-supplied, and no `-l` argument is present, you will see the banner, but
-nothing else interesting will happen.
+SCA's behaviour is specified by a sequence of **rules**, which are
+typically stored in one or more text files and executed with the
+**SCApply.py** script. If you want to try the following examples out for
+yourself, type the rule into a file, save the file as "foo.sca", and run
+the script as follows:
 
-All of the remaining arguments are optional.
+    python SCApply.py -q -cfoo <WORD>
 
--   `-q` or `--quiet`: don't print the starting banner.
--   `-lFILE` or `--input=FILE`: process words in the file called `FILE`.
-    The words are assumed to be separated by spaces.
--   `-dDIALECTS` or `--dialects=DIALECTS`: output results for `DIALECTS`
-    only. By default it is assumed that you want to see the results for
-    all dialects.
--   `-eENCODING` or `--enc=ENCODING`: use `ENCODING` to represent
-    strings. The default is "utf-8", so the program should handle
-    Unicode with some degree of success.
+where `WORD` is the example word; it can actually be several words, if
+you're feeling adventurous.
 
-If you have specified an input file, you can also use the following,
-which are useful if you, for example, your input file has words and
-meanings on the same line:
+### Basic replacements
 
--   `-fFIELDS` or `--fields=FIELDS`: process only the words specified by
-    `FIELDS`, which is a comma-separated list of one or more numbers or
-    ranges. For example, `-f0` means "first field only", `1-3` means
-    "second, third, and fourth fields", and `0,2-4` means "the first
-    five fields excluding the second." Note that the first field is
-    numbered zero.
--   `-FINSEP` or `--insep=INSEP`: use `INSEP` as the field delimiter.
-    The default is whitespace. This character should not be a valid
-    character in your orthography, otherwise the program won't know if
-    it's read a field delimiter or not.
+The most basic rule simply replaces all occurrences of one piece of text
+with another, for example:
 
-The following arguments affect the display of the output:
+    * a x _   ! banana -> bxnxnx
 
--   `-sSEP` or `--sep=SEP`: Output the results for all dialects on the
-    same line, with SEP as a separator. This is useful if you want to
-    view the output in a database or a program like OpenOffice Calc. It
-    overrides all of the other options below.
--   `-m` or `--minimal`: Minimalistic output. This overrides all of the
-    options below.
--   `-r` or `--rules`: Output each rule as it is processed in the
-    original form.
--   `-R` or `--regexp`: Output each rule as it is processed as a regular
-    expression. This is useful if you want to see what the program is
-    actually working with.
--   `-a` or `--all`: By default, the previous two options only generate
-    output when the word changes. Ths option will generate output each
-    time.
--   `-C` or `--colour`: Add colour highlighting to the output. You will
-    need an ANSI-capable terminal for this.
--   `-hN` or `--hlevel=N`: Only show headings up to level N. (0.5; this
-    was previously called "-L").
+This rule consists of five elements, which are separated by white space:
 
-The options `-R -a`, `-r -a`, and `-r` replace the options `-v1 -v2 -v3`
-in earlier versions of the program. They are ignored if you read your
-words from an input file, based on the entirely reasonable assumption
-that they may generate far more output than you really want to look at.
+-   A **dialect specifier**. Ignore this for now.
+-   The text which needs to be changed. This is referred to as `BEFORE`
+    hereafter.
+-   What `BEFORE` should be changed to; this is `AFTER`.
+-   The **environment**. This must contain an underscore; the text
+    before this underscore is referred to as `PRE`, and the text after
+    it is called `POST`. If both `PRE` and `POST` are empty, it means
+    "everywhere".
+-   A **comment**. This consists of the exclamation mark and everything
+    which follows it, and is ignored. Comments in the example rules in
+    this document show what the effect of the rule will be.
 
-As a simple example:
+Comments are optional; the other parts are mandatory. `BEFORE` and
+`AFTER` are together known as the **change** (better, perhaps,
+**transformation**, but that's longer to type).
 
-    python sc_apply.py -cspanish.sc flamma gutta ossu petra cu:pa
-    >>> flamma
-    S: llama
-    >>> gutta
-    S: gota
-    >>> ossu
-    S: hueso
-    >>> petra
-    S: piedra
-    >>> cu:pa
-    S: cuba
+`PRE` and `POST` may be used to restrict the change to occur before or
+after, or between, specific text; this models **conditioned**
+sound-changes in historical linguistics:
 
-Of course, it can't get everything right; if you have any improvements,
-let me know!
+    * a x b_   ! banana -> bxnana
+    * a x _n   ! banana -> bxnxna
+    * a x n_n  ! banana -> banxna
 
-If you want to save your output to a file, on Linux and Window\$ just
-add " `> name-of-file`" to the command-line. I don't know what to do on
-a Mac.
+Note, however, the following:
 
-Format of the rule file
------------------------
+    * n x a_a   ! banana -> baxana
 
-Each line in the rule file is assumed to comprise of a **comment**, a
-**definition**, a **rule**, a **directive**, or a blank line. Blank
-lines - empty lines and lines consisting of nothing but whitespace -
-play no part in the operation of the program and are ignored hereafter.
-The program tries to be intelligent about an incorrectly formatted line,
-but may not catch all errors.
+This does not give `baxaxa` - why? The answer is closely related to the
+**banana problem**, which asks, "how many occurrences of `ana` are there
+in `banana`? The problem is that there are either one or two, depending
+on whether you count overlapping occurrences or not. By default, SCA
+only considers nonoverlapping occurrences, but you can append a **flag**
+to a rule to make it consider overlapping ones as well:
 
-**Comments** may be specified in two ways. Anything on a line after an
-exclamation mark '!' (AKA bang, pling, cokebottle, and so on) is ignored
-altogether. Alternatively, a line starting with a hash character '\#'
-(AKA "pound sign", number sign, octothorpe, mesh, etc.) is also a
-comment; if the hash is followed immediately by one or more colons
-without intervening whitespace, the following text will be output if the
-number of colons following the hash is less than or equal to the number
-after the `-h` option.
+    * n x a_a B  ! banana -> baxaxa
 
-    ! This is a comment which will be ignored
-    foo = bar ! So is this
-    # And this
-    #: This will be printed with "-h1".
-    #:: This won't, but "-h2" will show it.
-    foo = bar # This is not a comment, and will generate an error message.
+Anything which follows the environment is ocnsidered to be a flag. Some
+other ones are `F` (for "first"), which performs the replacement once
+only starting from the beginning, and `L` (for "last"), which does the
+same from the end:
 
-(0.5: much of this is new.)
+    * a x _ F  ! banana -> bxnana
+    * a x _ L  ! banana -> bananx
 
-**Directives** consist of the words `SKIP NOSKIP END`, which must appear
-alone on a line. They may be used to disable rules if they're giving
-problems:
+There is also `R`, which does the same as `B` but starting from the end.
 
--   `END` means that no further lines in the file will be processed.
--   All lines after `SKIP` will be ignored until `NOSKIP` is reached.
--   `SKIP if COND` and `SKIP unless COND` work like `SKIP` if or unless
-    `COND` is given in a preceding `conditions =` definition. (New in
-    0.5.)
+NOTE: Use at most one of `BRFL`. The results of combining them are not
+guaranteed.
 
-Directives are provided for convenience and are not intended to
-constitute full C-like preprocessing facilities. In particular, they do
-not nest; `END` is obeyed even after `SKIP`.
+### Quantifiers
 
-**Definitions** have the format `name = value`, where any amount of
-whitespace is permitted around the equals sign and in **value**, but not
-in **name**. Three `name`s have special meaning:
+SCA supports the regular expression metacharacters `. ? + * |`, so you
+can write rules like:
 
--   `Include = FILE` will immediately read in the contents of the file
-    named `FILE`, which is handy if, for example, you have a set of
-    common definitions you want to use in several other files and don't
-    want to cut-and-paste them in each time.
--   `dialects = DIAL` indicates that each character in `DIAL` is a
-    separate dialect; the program will output one word for each dialect,
-    and rules may be specified to operate on certain dialects only. For
-    example, `dialects =        PGSCFOIR` might be used by someone who's
-    interested in comparing cognates in the Romance languages. The
-    characters must be uppercase or lowercase letters.
--   `conditions = COND1 COND2 COND3` is only meaningful in conjunction
-    with directives. (New in 0.5.)
+    * b|n x _  ! banana -> xaxaxa
+    * nc? x _  ! bananca -> baxaxa
+    * na* x _  ! bananaanta -> baxxxta
+    * na+ x _  ! bananaanta -> baxxnta
+    * b.n x _  ! bananabendy -> xanaxdy
 
-Otherwise, a definition defines a **category**, which is a group of
-**symbols**. Symbols have no special meaning to the program and mean
-whatever you want them to mean; in the context of sound-changes, for
-example, they represent individual phonemes. A symbol may be any
-non-space non-punctuation character, according to Python's definition;
-this permits most Unicode characters.
+`BEFORE` in these rules means respectively:
 
-A category `name` may be a single uppercase letter (this includes the
-Greek and Russian alphabets, and accented characters), or two or more
-letters in mixed case. Single-character names will convert your rules
-from clear-but-verbose to concise-but-cryptic. The digits 1-9 are also
-allowed providing that the name starts with a letter.
+-   `b` or `n`
+-   `n`, optionally followed by a `c`
+-   `n`, optionally followed by one or more `a`'s
+-   `n`, followed by one or more `a`'s
+-   `b`, followed by anything, followed by `a`
 
-**value** is one or more sets of symbols separated by whitespace. If a
-set is equal to the name of a previously defined category, the value of
-that category is substituted. For example:
+Generally speaking, though, it's better to avoid such explicit regular
+expressions in SCA; there are almost always better ways to specify what
+you want.
+
+If you want to use a character with special meaning as itself, precede
+it with a backslash; this includes the backslash character itself:
+
+    * \+ plus _ ! 3+3 -> 3plus3
+    * \\ /  _ ! path\to\file -> path/to/file
+
+### Categories
+
+Suppose you want to replace all vowels in a word with `x`. One way to do
+this is with the first rule:
+
+    * a x _
+
+repeated five times, with `a` replaced successively by `e i o u`. But
+this is clearly inefficient; a better rule is:
+
+    * a|e|i|o|u x _
+
+Still better, though, is to define a **category**:
+
+    vowel = aeiou
+    * <vowel> x _  ! facetious -> fxcxtxxxs
+
+The first line defines the category `vowel` to consist of the letters
+**aeiou**; the second refers to it in `BEFORE`.
+
+A category is an ordered list, so if you have categories in both
+`BEFORE` and `AFTER`, SCA will replace a character in the first category
+with the corresponding one in the second:
+
+    ustop = ptc
+    vstop = bdg
+    * <ustop> <vstop> _  ! reaction -> reagdion
+
+You can also use categories in `PRE` and `POST`, so you can model
+Welsh-style intervocalic lenition of voiceless stops with:
+
+    vowel = aeiou
+    ustop = ptc
+    vstop = bdg
+    * <ustop> <vstop> <vowel>_<vowel>  ! tecos -> tegos
+
+A category name should really consist only of letters and digits, must
+not start with a digit, and should not be all in uppercase. (Personally,
+I'd disallow digits completely.)
+
+You can't use a category in `AFTER` to replace simple text in `BEFORE`,
+because there is no meaningful way to decide which value from the
+category to use, so you can't do this:
+
+    * h F _ ! ERROR!
+
+### More about categories
+
+A category name can also be a single uppercase character, in which case
+the angle brackets are not needed to refer to it:
+
+    C = bcdfghjklmnpqrstvwxyz
+    V = aeiou
+    * C x V_V ! ambitious -> ambixious
+
+Categories can be extended, combined, and reduced in several ways. For
+example, in definitions:
 
     cat1 = abc def  ! cat1 = "abcdef"
     cat2 = cat1 ghi ! cat2 = "abcdefghi"
@@ -223,474 +243,804 @@ that category is substituted. For example:
     E    = AB       ! E    = "AB"; don't do this either.
     F    = A B      ! F    = "abcxyz"; this is the correct way to do it.
 
-The symbol "0" (zero) means "nothing", and may be used for padding.
-
-(0.5: rules for `name` and `value` are more clearly defined.
-Single-character names are permitted. Tildes are no longer necessary and
-are deprecated.)
-
-Rules
------
-
-This is the real meat of the program. There is a lot to take in here; be
-patient.
-
-A rule consists of four or five fields on a line, which are separated by
-white space:
-
-    DIALECTS   BEFORE  AFTER  ENV  FLAGS
-
-`ENV` in turn consists of two fields, `PRE` and `POST`, separated by the
-character '\_' (underscore); either or both of them may be empty.
-Informally, this rule means "for each dialect in `DIALECTS`, `BEFORE`
-changes to `AFTER` when preceded by `PRE` and followed by `POST`, using
-`FLAGS` if any are specified."
-
-`BEFORE` and `AFTER` must not be empty; if you really mean "nothing",
-you must use '0' (i.e. zero).
-
-`DIALECTS` is a string of letters or numbers which specify whch dialects
-the rule applies to, or "\*" to mean "all dialects". You can pad the
-dialect string with dots to make the file visually easier to follow
-(0.5: dots only are permitted for this); for example:
-
-    PGSC....  (rule applying to Portuguese, Galician, Spanish, and Catalan)
-    ...CFO..  (ditto Catalan, French, and Occitian)
-
-Alternatively, you can use . `DIALECTS` is omitted from the example
-rules below.
-
-`BEFORE`, `PRE`, and `POST` may consist of a sequence of one or more of
-the following:
-
--   A symbol, which stands for itself.
--   A single-character category name, which represents the appropriate
-    group of symbols.
--   A **category reference**, which is enclosed in
-    `<angle        brackets>`, ditto.
-
-For example, `Ta<cat>` means "a symbol from category `T` followed by the
-symbol 'a' followed by a symbol from category `cat`".
-
-`BEFORE`, `PRE`, and `POST` are all converted internally to reglar
-expressions, and may thus contain the special regular expression
-metacharacters. "." (a dot) may be used to represent "any character";
-the most useful of the others are "|" (pipe, "either-or"), "?" (question
-mark, for zero or one of the preceding), "\*" (asterix, zero or more),
-and "+" (plus, one or more). Thus `h?C` means "`C`, optionally preceded
-by `h`". Don't, however, use parentheses; you'll confuse the program.
-
-Within `ENV`, `a_b` means "when preceded by 'a' and followed by 'b'";
-`_` by itself, i.e. `PRE` and `POST` both empty, means "always". The
-following characters have special meanings within `PRE` and `POST`:
-
-| Character | Where valid     | Meaning                    |
-| --------- | --------------- | -------------------------- |
-| `#`       | `PRE`           | beginning of a word        |
-| `#`       | `POST`          | end of a word              |
-| `%`       | `PRE, POST`     | `BEFORE`                   |
-| 0 (zero)  | `BEFORE, AFTER` | null phoneme, empty, blank |
-| \<        | `AFTER, POST`   | `PRE`                      |
-| \>        | `AFTER`         | `POST`                     |
-
-"\`" (backquote) in `BEFORE` and `ENV` mean "use the corresponding field
-on the previous rule". If `BEFORE` is "\`\`" (two backquotes), both it
-and `ENV` are taken from the previous rule, and `ENV` is empty. You can
-use the words `BEFORE`, `PRE`, and `POST` instead of "%", "\<", and "\>"
-here and in mappings if you prefer. (0.5: all of these are new; \< is
-allowed in `POST`.)
-
-### Category references
-
-Category references are enclosed in \<angle brackets\>. There are
-several formats; the examples below assume that the following
-definitions have been set up:
+And in references:
 
     cat = abcdef
     dog = ghijkl
 
-| Format          | Meaning            | Equivalent                |
-| --------------- | ------------------ | ------------------------- |
-| \<cat\>         | Reference          | "abcdef", of course       |
-| \<\^cat\>       | Complementation    | anything but "abcdef"     |
-| \<cat+ghi\>     | Augmentation       | "abcdefghi"               |
-| \<cat-ace\>     | Subtraction        | "bdf"                     |
-| \<+ghi\>        | One-off reference  | "ghi"                     |
-| \<-ghi\>        | One-off complement | anything other than "ghi" |
-| \<\<cat,dog\>\> | Combination        | "abcdefghijkl"            |
-
-'+' and '-' are new in 0.5, and are useful if you have a specific set of
-symbols which you use once or twice and don't want to create a separate
-category for them. The format `>abc<` is no longer supported in 0.5; use
-`<+abc>` instead.
-
-If `C` is defined as a category name, the angle brackets are not needed
-if the symbols "\^", "+", and "-" are not present; i.e. `<C>` is
-equivalent to `C`. The commas are not needed in the last format if all
-the category names are single characters; `<<ABC>>` is thus the same as
-`<<A,B,C>>`.
-
-`AFTER` must consist of "0" (zero), a single category reference, or a
-sequence of symbols, **indexes**, and **mappings**. If it contains just
-a category reference, `BEFORE` must also contain just a category
-reference, and the two categories must contain the same number of
-symbols. The rule is then converted to the mapping `{%:BEFORE:AFTER}`.
-
-(0.5: "\_" (underscore) is no longer permitted in `AFTER`, and is no
-longer necessary anyway.)
+    <cat>         ! "abcdef", of course
+    <^cat>        ! Complementation; anything but "abcdef"
+    <cat+ghi>     ! Augmentation; "abcdefghi"
+    <cat-ace>     ! Subtraction; "bdf"
+    <+ghi>        ! One-off reference; "ghi"
+    <-ghi>        ! One-off complement; anything other than "ghi"
+    <cat,dog>     ! Combination; "abcdefghijkl"
+    <cat,dog+xyz> ! Combination; "abcdefghijklxyz"
+    <cat,dog-aei> ! Combination; "bcdfghjkl"
 
-An **index** consists of the '\#' character followed by an optional
-minus sign and a digit `n`. `#n` means "the nth symbol in BEFORE,
-counting from 1 at the start"; `#-n` means "the nth symbol in BEFORE,
-counting from 1 at the end". Zero is not a valid digit in an index.
+It is better to use these for one-offs only and define separate
+categories if you need to use them a lot.
 
-### Mappings
+In general, a string of letters in a category reference will be treated
+as the category definition if there is one, otherwise the letters
+themselves. Note, however, that if all contiguous letters in a reference
+are uppercase, they will be treated as categories; thus `<AB>` is the
+same as `<A+B>`.
 
-Mappings are new in 0.5, and replace the older format with backquotes,
-which is deprecated.
+SCA tries to be sensible when one category replaces another and there
+are different numbers of characters in the two categories, or if there
+are duplicate characters. If the category in `BEFORE` is longer, the
+extra characters are deleted; if the one in `AFTER` is longer, the extra
+charactres are simply ignored:
 
-A mapping is referred to as `{a:c1:c2}` (older `` a`c1`c2 ``), where
-`c1` and `c2` are category names (\*not\* references), and means "the
-symbol in `c2` which occupies the same position as `a` does in `c1`".
-`c1` and `c2` must have the same number of symbols, and `a` is one of
-the following:
+    * <+abcde>  <+xyz>    _ ! debacle -> yxzl
+    * <+abc>    <+vwxyz>  _ ! debacle -> dewvxle
 
--   A digit, with optional preceding minus sign. This specifies an
-    index; the hash symbol is not necessary.
--   `<`, which means `PRE`.
--   `>`, which means `POST`.
--   `%`, which means `BEFORE`.
+Duplicates in `AFTER` should not be surprising; duplicates in `BEFORE`
+ignore every occurrence except the first:
 
-The colons may be omitted if `c1` and `c2` are both single-character
-category names.
+    * <+abcde>  <+xxyyz>  _ ! debacle -> yzxxylz
+    * <+abbcde> <+xxyyzz> _ ! debacle -> zzxxylz
 
-There are six shorthand mappings, in all of which `c2` is equivalent to
-`BEFORE`:
+It's legal to use quantifiers with categories, thus, to remove sequences
+of `x` followed by one or more vowels, you'd do this:
 
-| Mapping | a                 | c1     |
-| ------- | ----------------- | ------ |
-| `{>}`   | `POST`            | `POST` |
-| `{<}`   | `PRE`             | `PRE`  |
-| `{%>}`  | `BEFORE`          | `POST` |
-| `{%<}`  | `BEFORE`          | `PRE`  |
-| `{n>}`  | index in `BEFORE` | `POST` |
-| `{n<}`  | index in `BEFORE` | `PRE`  |
+    * x<vowel>+ 0 _
 
-Mappings are very powerful and should be properly understood before they
-are used. For some examples, see the sample rules later on.
+Zeros in a category in `AFTER` will delete the corresponding characters
+in `BEFORE`:
 
-Flags
------
+    * <+abcde>  <+x0y0z>  _ ! debacle -> zxylz
 
-The `FLAGS` field consists of zero or more characters, which alter the
-way the rule works. At present, three flags are supported, and all
-others are ignored.
+Finally, note this rather silly situation:
 
-The `P` flag will specify a rule as **persistent**: all persistent rules
-are applied, in the order they appear in the file, after every other
-rule. For example, a persistent nasal harmony rule like this:
+    T = ptk
+    V = aeiou
+    * <TV> <VT> _
 
-    <nasal>    {>}     _<vstop>   P
+The rule is equivalent to:
 
-will always ensure that nasals are homorganic to following voiced stops.
+    * <+ptkaeiou> <aeiouptk> _
 
-The `B` flag means "apply this rule until no further changes occur". It
-is necessary to get around the ambiguity of the **banana problem**
-(search for it in the [Jargon File](http://www.catb.org/~esr/jargon/))
-when `PRE` and `POST` match the same characters ; for example, if you
-have the following rule:
+which probably won't do what you want.
 
-    n   z   <vowel>_<vowel>
+### Features
 
-"banana" will then be converted to "bazana", not "bazaza" as you
-probably want. The point here is that Python's regular-expression
-matcher thinks that "banana" contains one occurrence of "ana", whereas
-we'd like it to think there are two. With the `B` flag, the rule will
-work as we want:
+Features are an alternative way of looking at category replacements.
+They're an attempt to satisfy those who prefer the lower-level sort of
+sound-change rule which looks like this:
 
-    n   z   <vowel>_<vowel>   B
+    * [-voice] [+voice] V_V ! ata -> ada
 
-Beware! If some symbols appear in both `BEFORE` and `AFTER`, this won't
-work. For example, if you try to do Welsh-style lenition like this:
+A feature is defined as a pair of category-like definitions separated by
+a pipe. The first part of the pair specifies the characters which do not
+have the feature, and the second part specifies those which do, so that
+the meaning is "adding the feature to each character in the first part
+produces the corresponding character in the second part". There must be
+the same number of characters in each part. For example, `voice` could
+be defined as one of the following:
 
-    unlen = ptkbdg
-    len   = bdgvDG
-    vowel = aeiou
+    feature voice ustop ufric | vstop vfric
+    ptk f s h | b d g vz G
 
-    <vstop>   <vfric>   <vowel>_<vowel>   B
+Features can't be defined in terms of other features, but they can be
+combined:
 
-then "apa" will become "ava". See if you can work out why.
+    feature fric ustop vstop | ufric vfric ! define feature "fric"
+    [-voice,-fric] [+voice,+fric] V_V      ! kata -> kaza
 
-The `R` flag is like the `B` flag, but operates from the end of the
-word. For example, here's the rule for finding the weak and strong jers
-in Slavonic:
+### Indexes, positions, and zero
 
-    <strong> <weak>        _
-    <weak>   <strong>      _<cons>+<weak> R
+The following definitions are assumed hereafter.
 
-Example rules
--------------
+    T = ptk
+    D = bdg
+    F = fÎ¸x
+    N = mnÅ
+    V = aeiou
+    L = lr
+    stop = T D
 
-And now, at last, here are some examples of how all of this works in
-practice. Most of these use the categories defined in the file `ipa.sc`.
+In a rule like:
 
-### Conversion
+    * F Th _ ! fotografy -> photography
 
-To convert one category to another in certain environments, simply do:
+SCA is clever enough to know that `T` and `F` are both in the same
+position in their parts, so an `F` should be replaced with a `T`. The
+reverse will also work, so:
 
-    <old>  <new>  foo_bar
+    * Th F _ ! photography -> fotografy
 
-where `foo` and `bar` can be anything you want; watch out for the banana
-problem if they overlap. To ensure that the rule is applied only when
-they are the same - for example, to delete something between two
-identical vowels - replace `bar` with `<`:
+However, this (hello, Sally Caves!) won't:
 
-    <old>  <new>  foo_<
+    * F hT _ ! ERROR!
 
-### Loss
+because there is nothing corresponding to the `T`. However, you can do
+this instead:
 
-Use "0" (zero) for `AFTER`:
+    * F h<1T> _ ! fotografy -> hpotograhpy
 
-    <cons>+   0           _#
+Internally, `BEFORE` and `AFTER` are converted to a sequence of
+**items**; a category makes up a single item, as does any contiguous
+string of ordinary characters and regexp metacharacters. In `AFTER` in
+this rule, `<1T>` means "replace the first item in `BEFORE` with the
+corresponding `T`"; this is called a **category mapping**. Note that the
+angle brackets are mandatory here, regardless of the name of the
+category.
 
-means "all consonants disappear at the end of a word". This would work
-just as well without the "+" and with the `B` flag. But don't do this:
+Digits can be used in `AFTER` to refer to items in `BEFORE`, so you can
+make two characters change places (**metathesis**) with:
 
-    <cat>X    <cat>       _
+    * VL 21 _ ! tort -> trot
 
-to mean "X disappears after something of category `cat1`". The correct
-way is this:
+The digit `0` (zero) has the special meaning of "nothing". So you can
+get rid of characters you don't like by replacing them with zero:
 
-    X         0           <cat1>_
+    * F 0 _ ! fusty -> uty
 
-### Conversion and loss
+A more complicated example, which deletes anything between an `N` and a
+`T`, is:
 
-Suppose you have a symbol ":" which follows a vowel which is to be
-lengthened. You can carry out the lengthening like this:
+    * . 0 N_T ! nutmeg -> ntmg
 
-    <short>  <long>   _:
-    :        0        <long>_
+This can also be written:
 
-Better, however, is to use a mapping:
+    * N.T 13 _ ! nutmeg -> ntmg
 
-    <short>: <1:short:long>   _
+Our problematic rule earlier can also be fixed with a zero to pad the
+rule out, although this is not recommended:
 
-### Metathesis
+    * 0F hT _ ! fotografy -> hpotograhpy
 
-To make two or more symbols change places, use indexes in `AFTER`. For
-example:
+In general, if you have several ways of expressing the same rule, the
+choice depends on how you view the rule. For example, both the following
+do the same thing:
 
-    <vowel><liquid>   #2#1   <stop>_<stop>
+    * etymology entomology _
+    * ty        nto       e_mology
 
-will change "tort" to "trot".
+but one views the change as replacing one complete string with another,
+while the other considers only the parts which actually change.
 
-### Epenthesis
+If you have zero on its own in `BEFORE`, you can create characters out
+of nothing (**epenthesis**):
 
-Use "0" (zero) for `BEFORE`:
+    * 0 p m_r ! amra -> ampra
 
-    0    d     n_r
+This is more useful with [blends](blend), with which it can be
+generalised.
 
-means "'nr' becomes 'ndr'". Of course, you could also do:
+### Strings and lists
 
-    nr    ndr     _
+A **string** is a sequence of characters which you would like to use
+more than once. For example, if you want to censor the string 'xenu'
+differently in different contexts, you can do this:
 
-But you can generalise the rule to:
+    string foo xenu     ! define string 'foo'
+    * $foo$ xxxx _\.net ! www.xenu.net -> www.xxxx.net
+    * $foo$ yyyy _      ! "his name was xenu" -> "his name was yyyy"
 
-    0    {<:nasal:vstop}    <nasal>_<liquid>
+A **list** is like a category, except that it is made up of strings
+rather than single characters:
 
-which will also convert "ml" to "mbl", among others.
+    list dips   ei,ai,oi,eu,au,ou  ! define list 'dips'
+    list single i,e,e,u,o,o        ! define list 'single'
+    * ~dips~ ~single~ _            ! reitainous -> ritenos
 
-Here's a more dramatic example. This does Sievers' law in Indo-European,
-which inserts a vowel between a heavy syllable and a glide; for example,
-"andya" becomes "andiya":
+You can interpolate strings in lists, and replace lists and categories
+with each other:
 
-    <cons><glide>   #1{2:glide:high}#2  #|<cons>|<long>|<vowel><vowel>_<vowel>
+    list dips   ei,ai,oi,eu,au,ou
+    foo = uvwxyz
+    * ~dips~ <foo> _ ! daireitous -> dvrutzs
+    * <foo> ~dips~ _ ! vexedly -> aieoiedlau
 
-See if you can work out why you can't use zero in `BEFORE` here.
+Note, however, that this won't do what you might expect:
 
-### Assimilation
+    list dips   ei,ai,oi,eu,au,ou
+    * ~dips~ <+ieeoou> _ ! daireitous -> derits
 
-Here is where mappings come into their own:
+This is because `<ieeoou>` is a category, not a list, and it ends up as
+`ieou`.
 
-    <nasal>    {>}     _<vstop>
+### Referring to BEFORE, PRE, and POST
 
-will convert, for example, "md" to "nd". For complete regressive
-assimilation, to convert "md" and "nd" to "dd", use `>` in `AFTER`:
+Suppose you want to reduce a sequence of two identical characters to
+one. Within SCA, the way to do this is to regard it as removing a
+character if it appears after itself, so we need a way of specifing that
+`PRE` is to be equal to `BEFORE`. The percent sign is interpreted in SCA
+as meaning `BEFORE` when it in `PRE` or `POST`:
 
-    <nasal>    >       _<vstop>
+    * a 0 %_ ! bazaar -> bazar
+    * a 0 _% ! bazaar -> bazar, exactly the same
 
-Note the difference between the mapping and the straightforward
-substitution. For progressive assimilation, use `<` and `{<}` in
-`AFTER`.
+This will also work with strings and, more usefully, lists:
 
-### Simplification
+    string foo xyz
+    list dips ei,ai,oi,eu,au,ou
+    * $foo$  0 %_ ! xyzxyz -> xyz
+    * ~dips~ 0 %_ ! raiain -> rain
 
-To reduce two consecutive occurrences of a symbol in category `cat` to
-one, you can do this:
+The signs `<` and `>` can be used by themselves in `AFTER` to represent
+`PRE` and `POST` respectively; this models **complete assimilation**:
 
-    <cat>    0     _%
+    * N > _D ! android -> addroid
+    * D < N_ ! android -> annroid
 
-or this:
+And you can also use `<` in `POST`; thus to delete something which
+appears between two identical vowels:
 
-    <cat>    0     %_
+    * N 0 V_< ! canal -> caal
 
-### Gemination
+You can have other things in `PRE` and `POST` alongside the percent
+sign, although this is not yet guaranteed to work:
 
-To turn one symbol into two, one of the following will work:
+    * a 0 _n% ! banana -> bnna
 
-    0          <       x_whatever
+### Anchors
 
-if 'x' geminates before a particular environment;
+The hash character in `PRE` means "the beginning of the text", and in
+`POST` it means "the end of the text". So you can remove a single final
+vowel with:
 
-    0          >       whatever_x
+    * V 0 _# ! racine -> racin
 
-if it geminates after a particular environment;
+or several with:
 
-    x          #1#1    whatever_whatever
+    * V+ 0 _# ! superbee -> superb
 
-if it's more complicated than that.
+Similarly, to put an `h` before an initial vowel:
 
-### Miscellany
+    * 0 h #_V ! umour -> humour
 
-Here are a few more rules from some of my files, with a minimum of
-explanation.
+Quite often, you need to indicate "initially or after a consonant"; this
+works as you might expect:
 
-#### Palatalisation of velars
+    * h 0 #|<cons>_ ! heather -> eater
 
-    <velar>j   {1:velar:pal}  _
-    Kj         {1KC}          _  ! very concise alternative
+### Blends
 
-#### i-umlaut
+Blends are probably the trickiest part of SCA to understand, which is
+why they have been left to last.
 
-    <backround>   <frontround>   _<cons>+j
+A blend is a special type of category replacement in which the category
+and the index of the replacement character in the category come from
+different places, rather than taking them both from `AFTER`. It is
+specified as `{cat:pos}`, where **cat** specifies the category and `pos`
+the position. For example, in:
 
-#### Vowel harmony, Hungarian style
+    * N {1:>1} _T ! anpa -> ampa
+
+the category comes from `BEFORE` and the position from `POST`; the
+effect is that the item in `AFTER` remains a nasal, but shifts position.
+In linguistic terms, this is **regressive assimilation** of the nasal to
+the following stop. If you switch the two parts of the blend, like this:
+
+    * N {>1:1} _T ! anpa -> atpa
+
+the position stays the same, but the category changes instead. This is
+almost the same as this normal category replacement:
+
+    * N T _T ! anpa -> atpa
+
+except that the replacement category comes from `POST` rather than being
+explicitly specified.
+
+`1` means "the first item in `BEFORE`", and `>1` means "the first item
+in `POST`". Similarly, `<1` means "the first item in `PRE`", and can be
+used to indicate **progressive** assimilation:
+
+    * N {1:<1} _T ! anpa -> anta
+    * N {<1:1} _T ! anpa -> anma
+
+The indexes - `1` in all of these examples - can be omitted, in which
+case the item from which the category or position is taken is the
+corresponding item in the appropriate part. So, these four examples
+could also be written:
+
+    * NT {:2}2 _ ! anpa -> ampa
+    * NT {2:}2 _ ! anpa -> atpa
+    * NT 1{:1} _ ! anpa -> anta
+    * NT 1{1:} _ ! anpa -> anma
+
+where the unspecified category indexes are taken to be 1 in the first
+two and 2 in the others.
+
+Blends can also model **epenthesis**, with zero in `BEFORE`; you need
+either to have both `PRE` and `POST` in the blend:
+
+    * 0 {>:<} N_T ! amta -> ampta
+    * 0 {<:>} N_T ! amta -> amnta
+
+or an explicit category in the category part:
+
+    * 0 {T:<} N_L ! anra -> antra
+    * 0 {T:>} L_N ! arna -> artna
+
+Alternatively, if you prefer to keep your environments clean, you can do
+these instead:
+
+    * NL {T:1}   _ ! anra -> antra
+    * LN {T:2}   _ ! arna -> artna
+    * NT 1{2:1}2 _ ! amta -> ampta
+    * NT 1{1:2}2 _ ! amta -> amnta
+
+### When all else fails - temporary environments
+
+Sometimes you just can't get a single rule to do what you want to; in
+this case, you'll probably need two or more rules and a bit of fiddling.
+For example, say you want to delete a `h` between two vowels, but not if
+the first is `a` and the second `u`. With a single rule, this is almost
+impossible. Instead, you can set up a temporary environment with an
+otherwise unused character:
+
+    * 0  ; Vh_V B ! tentatively mark each 'h'; note the banana flag
+    * ;  0 ah_u   ! remove the marker if necessary
+    * h; 0 _      ! and get rid of the remaining 'h's.
+
+Quite often, you'll need a rule which removes stray characters after
+this kind of thing:
+
+    * ; 0 _ 
+
+Higher-level processing
+-----------------------
+
+SCA has a number of ways to consider rules as more than just isolated
+items in a sequence. The principal mechanisms for this are
+**directives** and **comments**.
+
+### Comments
+
+Actually, comments don't do anything; they're merely a way for you to
+annotate your files without interfering with SCA.
+
+A comment may be specified in two ways. We've already seen the
+exclamation mark, which turns everything after itself into a comment if
+it's not at the start of a line. If you want an entire line to be a
+comment, put a hash character at the start. So:
+
+    * foo bar _ ! this is a comment
+    # so is this
+    !but this isn't - it's a directive and will cause an error
+    ! nor is this
+    * foo bar _ # and nor is this; it looks like an anchor or a flag
+
+### Directives
+
+A line which starts with an exclamation mark is a directive; it's an
+instruction to SCA to do something other than define a rule, category,
+or whatever. For example:
+
+-   `!end` tells SCA not to read any more input. This takes precedence
+    over aanything else.
+-   `!skip` tells SCA to ignore all further input lines until further
+    notice.
+-   `!noskip` undoes all preceding `!skip`s, which do not nest.
+
+These are provided for convenience and not as part of a **cpp**-like
+preprocessor; I really hope nobody's files get that complicated anyway.
+
+Mnay directives take parameters, which are given as `!param=value`; some
+parameters have no value and are given as just **param**. For example:
+
+-   `!include file=FILE` will read in the contents of `FILE` before
+    proceeding with the current file. You will be warned about recursive
+    includes, so don't try it.
+
+Other directives will be introduced as appropriate.
+
+You can specify that the value of a parameter may be [supplied on the
+command-line](#def) (q.v.). Two directives which can only work this way
+are:
+
+-   `!skipif COND`: like `!skip`, but only if `COND` is defined on the
+    command-line with `-DCOND`
+-   `!skipunless COND`: similarly, but only if it is not defined.
+
+### Groups and randomisation
+
+Rules can be **grouped** into larger entities with the `!group`
+directive; `!endgroup` signals the end of the group. By itself this
+isn't very useful, but with the appropriate parameters you can add a bit
+of non-determinism to your processing:
+
+-   `times=N` will execute the group exactly `N` times.
+-   `shuffle` will randomly reorder the rules in the group before
+    applying them, once per iteration.
+-   `max=N` will process the first `N` rules in the group; this is
+    useful in conjunction with `shuffle`.
+-   `pick=N` is equivalent to `shuffle max=N`, and will apply `N` random
+    rules out of the group.
+-   `prob=N` will execute the entire group only if a random number
+    between 0 and 100 is less than `N`.
+-   `ruleprob=N` is similar, but the probability applies to each
+    individual rule within the group.
+-   `reduce=N` can be used to decrease the values of `prob` and
+    `ruleprob` after each iteration; for example, `reduce=50` will halve
+    them each time.
+-   `seed=string` will seed the random numbers with `string`. If
+    `string` equals `time`, the system clock will be used instead, which
+    should ensure that the random numbers are unpredictable. If `string`
+    is `word`, the default settings are used (see below).
+
+You can apply random probabilities to individual rules by expressing the
+probability as a percentage flag:
+
+    * x 0 _ 50 ! get rid of the x's half of the time
+
+And you can select random values from categories:
+
+    * x <@vowel> _ ! change x's to random vowels
+
+By default, the random numbers are seeded each time with the next word
+to be processed, or with the recently-processed word for the group-based
+parameters. This effectively means that rules with percentages will
+affect the some words each time, which is hopefully a good simuation of
+incomplete sound change.
+
+#### Persistence
+
+A special group consists of the **persistent** rules, which are
+specified with the `P` flag. These rules are all applied, in the order
+in which they are defined, after each non-persistent rule; for example:
+
+    * x 0 _ P ! ensure that we never have any x's
+
+### Dialects
+
+A **dialect** is a path through the sequence of rules. Its name derives,
+of course, from SCA's original application in simulating historical
+linguistic development.
+
+Dialects are identified by single letters or digits; by default you get
+the one dialect `A`. All dialects to which your file applies must be
+specified at the top of the file with the `!dialect` directive; thus
+`!dialect AB C D` declares that you have four dialects called `A B C D`.
+You can then declare that a rule applies to certain dialects only, thus:
+
+    A...  ~ai,au~  <+EO>   _   ! dialect 'A' collapses diphthongs
+    .B..  <ustop>  <vstop> V_V ! dialect 'B' does lenition
+    ..C.  V        <@V>        ! dialect 'C' mangles vowels
+
+The dots aren't necessary, but are convenient for lining up the text
+neatly.
+
+To save you having to type out the same dialect specifier in front of
+several lines in succession, you can use the `!dirprefix` directive. The
+value of its `dialects` parameter is prepended to each line:
+
+    !dirprefix dialects=A
+    # some rules for dialect 'A'
+    !dirprefix dialects=B
+    # some rules for dialect 'B'
+    !dirprefix dialects=
+    # now need actual dialect specs again
+    AB foo bar baz_quux
+
+### Exceptions
+
+Occasionally you want a rule to ignore a specific word. This is done in
+SCA through the mechanism of **exceptions**, which should not be
+confused with the exceptions which programming languages throw when
+something goes wrong.
+
+To specify an exception to a rule, you need to do two things: identify
+the rule, and say which combinations of dialects and words it doesn't
+apply to. For example:
+
+    !exception rule=FOO words=sanctus dialects=ABC
+    *  c   0   n_t    _   @FOO
+
+Here the `@FOO` flag gives the name `FOO` to the rule, and the
+`!exception` directive says that in dialects `A B C` the word `sanctus`
+wil be left alone.
+
+As well as specifying exceptions in the file, you can put then in a file
+of their own called `FILE`, which can be read in with the
+`!exceptfile file=FILE` directive. This file must be in the following
+format for each combination of rule and dialect:
+
+    @RULE dialects
+    words words words
+    words words
+    words
+
+### Referring to previous rules and parts
+
+If the backquote character `` ` `` appears in `BEFORE`, `AFTER`, or the
+environment, the part is taken from the previous rule:
+
+    A..  s   z   V_V   ! voicing
+    .B.  `   h   `     ! lenition
+    ..C  `   t   `     ! rhotacism
+
+Equivalently, you can name the first rule and refer to it explicitly:
+
+    A..  s     z V_V   @FOO
+    .B.  `@FOO h `@FOO
+    ..C  `@FOO t `@FOO
+
+You can also name specific changes and environments, and use them later:
+
+    change lenition     <ustop> <vstop>
+    env    intervocalic V_V
+
+    .B. `lenition `intervocalic
+
+Note that the first definition here defines both `BEFORE` and `AFTER`;
+there isn't a lot of point defining just one.
+
+### Headings
+
+A heading is a comment which is echoed back to the user if requested.
+There are three levels of headings:
+
+    !heading Top-level processing
+    !subheading not so important stuff
+    !subsubheading incidentals
+
+For displaying headings in the output, see the `-L` [command-line
+option](#clopts).
+
+### Assertions
+
+**Assertions** allow you to test whether a rule gives the output you
+expect. By default they are ignored; you can tell SCA to take notice of
+them with the `-A` [command-line option](#clopts).
+
+You can specify an assertion with the `!assert` directive, which applies
+to the most recently-defined rule:
+
+    A t d a_e
+    !assert dialect=A word=ate result=ade
+    !assert dialect=B word=rate result=rate
+
+The parameters are hopefully self-explanatory. If an assertion fails,
+i.e. if applying the rule to `word` does not give `result` in `dialect`,
+SCA will warn and exit.
+
+### L-systems
+
+Because SCA does list replacements in parallel, lists are ideal for
+implementing the rules of an L-system. Here, for example, is how to
+produce ten generations of Lindenmayer's original L-system:
+
+    list predecessor a,b
+    list successor   ab,a
+
+    !group times=10
+    L ~predecessor~ ~successor~ _
+    !endgroup
+
+No doubt, SCA could also specify a workable implementation of [John
+Horton Conway's Game of
+Life](http://en.wikipedia.org/wiki/Conway's_Game_of_Life). This is left
+as an exercise for the reader.
+
+Command-line options
+--------------------
+
+We've seen some command-line options already; here's the complete list.
+Every argument has a short form, which is a single letter, and a long
+form, which is one or more words; the short form is preceded by a
+hyphen, and the long one by two:
+
+-   `-X` or `--option` simply turns option `X` on;
+-   `-Xvalue`, `-X value`, or `--option=value` supplies `value` with the
+    option.
+
+All of the options which SCA understands are specified in the file
+`SCAparams.yaml`, so you can change them if you really need to.
+
+### Miscellaneous options
+
+-   `-cFILE` or `--scfile=FILE`: tell SCA which sound-change file to
+    use. Note that this option is actually mandatory. If `FILE` does not
+    end in `.sca`, this suffix will be appended automatically.
+-   `-xFILE` or `--excfile=FILE`: load [exceptions](#exc) from `FILE`.
+    This has the same effect as the `!exceptfile` directive at the start
+    of the sound-change file.
+-   `-i` or `--showdefs`: show everything which is defined and exit.
+-   `-dDIALECTS` or `--dialects=DIALECTS`: process the words through
+    `DIALECTS`. By default, all defined dialects are used.
+-   `-eENC` or `--encoding=ENC`: use encoding `ENC` for input and
+    output. The default is `utf-8`.
+-   `-SSTRING` or `--seed=STRING`: set the random number seed to
+    `STRING`; this is the same as the `!seed` directive.
+-   `-A` or `--doassert`: run in [assertion mode](#assert).
+
+### Definitions
+
+A **definition** is a name-value pair which can be passed to SCA and
+referred to in the parameter list of a directive. A definition is
+specified with `-DNAME=VALUE` or`-define=NAME=VALUE`; the value may be
+absent, in which case the equals sign is not needed and SCA is only
+interested in whether `NAME` is defined.
+
+You can refer to the definition with `&NAME:DEFAULT`; it is not wise not
+to supply a default. For example:
+
+    !group times=&times:5
+    ... rules ...
+    !endgroup
+
+This will process the group five times by default, but you can specify a
+different number of iterations with `-Dtimes=42`.
+
+### Output to the screen
+
+By default, SCA will print its output to the screen preceded by a banner
+and some information about how many things are defined. Each input word
+is preceded by "\>" followed by the outcome in each dialect on the
+following lines. The following options affect the style of this display:
+
+-   `-q` or `--quiet`: don't show the banner or counts.
+-   `-v` or `--verbose`: show each rule as it's compiled.
+-   `-m` or `--minimal`: just show the output words; this overrides
+    everything below.
+-   `-r` or `--rules`: display each rule which changes the word as text.
+-   `-R` or `--regexp`: display each rule which changes the word as a
+    regular expression; this is useful to see what's happening behind
+    the scenes.
+-   `-a` or `--all`: when used with `-r` or `-R`, shows all rules
+    whether they make a change or not.
+-   `-C` or `--colour`: add colour to the output; this requires an
+    ANSI-compatible terminal.
+-   `-n` or `--showlines`: show the line number on which the rule was
+    defined.
+-   `-LN` or `--level=N`: when used with `-r` or `-R`, displays
+    headings, plus subheadings if `N` is 1 or greater, and
+    subsubheadings if it is 2 or greater.
+
+### Input files
+
+SCA can read words from a file and process them in hopefully useful
+ways.
+
+The file is specified with `-lFILE` or `--lexfile=FILE`, as in Mark R's
+program. If no other options are given, SCA will split each line in
+`FILE` on whitespace and process every one of the resulting words. The
+`-FSEP` or `--insep=SEP` option specifies an alternative separator, such
+as a comma for `.csv` files.
+
+If you don't want to process all words on a line, use the `-fFIELDS` or
+`--fields=FIELDS` option. Here `FIELDS` is a comma-separated list of
+numbers and ranges, for example `1,3-5` for fields 1 3 4 5, or `2` for
+just one field. Note that the numbering starts at zero.
+
+#### Test files
+
+The `-tFILE` or `--testfile=FILE` option is especially interesting. It
+expects an input file in a strict format, in which the first line is
+treated as a header; one field in the header must contain the word `in`,
+and each of the others must specify a dialect such as `A`; optionally,
+one field may contain `out`. On each subsequent line, the word in the
+field headed `in` is processed in each of the dialects specified in the
+other fields in the header, and the results are compared to the
+corresponding fields in the line; all differences are reported, with the
+test in the `out` field (if present) output to facilitate
+identification.
+
+For example, if you're investigating Romance diachronics, you might use
+a test file like this:
+
+    in     out   P     E     F     I
+    Ãºnus   one   um    uno   un    uno
+    duÃ³    two   dois  dos   deux  due
+    trÃ©s   three tres  tres  trois tre
+
+### Output files
+
+By default, the output from processing an input file goes to the screen.
+There is a little magic built into SCA to send it to a file instead.
+
+You can specify the output file name with `-oFILE` or `--outfile=FILE`.
+By default the output is written in fixed-width columns of width 15; you
+can change the width with `-wN` or `--width=N`, or supply an output
+separator `C` with `-sC` or `--sep-C`.
+
+What now happens is that each input line is written to the output, and
+for each field specified with `-f` (all fields by default), the results
+of processing the word in that field through the specified dialects are
+appended to the input line. If you supply the `-H` or `--header` option,
+the first line in the input file is treated as a header and is not
+processed; the extra columns are identified with the respective
+dialects. Obviously, you won't want too many input words on each line
+when doing this.
+
+Converting from older versions
+------------------------------
+
+If you have a `.sc` file from version 0.6 of the older SCA, you can
+convert it to a `.sca` file which will work with version 0.8 with the
+help of the following.
+
+### Now directives
+
+The following features should be convered to directives:
+
+-   `#: #:: #:::` -\> `!heading !subheading !subsubheading`
+-   `SKIP NOSKIP END` -\> `!skip !noskip !end`
+-   `SKIP IF COND` -\> `!skipif cond=COND`
+-   `SKIP UNLESS COND` -\> `!skipunless cond=COND`
+-   `Include = FILE` -\> `!include file=FILE`
+-   `dialects = DIALECTS` -\> `!dialects DIALECTS`
+-   `exceptions = FILE` -\> `!exceptfile file=FILE`
+-   `except = ID WORDS` -\>
+    `!exception rule=ID   dialects=DIALECTS word=WORD`, once for each
+    `WORD` in `WORDS`
+-   `assert = DIAL WORD RESULT` -\>
+    `!assert dialect=DIAL   word=WORD result=RESULT`
+-   `conditions` -\> now on the command-line with `-D`
+
+The following are no longer supported:
+
+-   ``` `` ```; use a single `` ` `` in each part instead.
+-   The `<<cat>>` category specification now needs single angle
+    brackets.
+
+The `%` on the end of a percentage is no longer required, and will
+probably cause an error. Similarly, references to individual items
+within `BEFORE` no longer need a hash character.
+
+Finally, [mappings](#rcm) are sufficently different to require
+individual attention. A mapping like `{1AB}` can probably be converted
+to `<1B>`, and those like `{>}` can hopefullybe left alone, but it's
+difficult to generalise otherwise.
+
+Sample rules
+------------
+
+For fun, here are some rules which implement well-known sound changes.
+
+### Palatalisation of velars
+
+For example, in Slavic or Romance.
+
+    velar   = kgxÉ£
+    palatal = Ê§Ê¤ÊÊ
+    front   = iÃ­Ã®eÃ©Ãª
+    * <velar>j <1palatal> _        ! rakja -> raÊ§a
+    * <velar>  <palatal>  _<front> ! raki -> raÊ§i
+
+    * Kj C _  ! very concise alternative
+
+### Hungarian-style vowel harmony
+
+First of all:
+
+    front = eÃ¸y
+    back  = aou
 
 If the harmony is dictated by the first vowel in the word:
 
-    <+eøy>  <+aou>   <+aou>.*_ B
-    <+aou>  <+eøy>   <+eøy>.*_ B
+    * <front> <back>  <back>.*_  B
+    * <back>  <front> <front>.*_ B
 
-If it's dictated by the last vowel in the word:
+If it's dictated by the last vowel in the word, we need a reverse banana
+(and you were wondering what the point of that was, weren't you?):
 
-    <+eøy>  <+aou>   _.*<+aou> R
-    <+aou>  <+eøy>   _.*<+eøy> R
+    * <front> <back>  _.*<back>  R
+    * <back>  <front> _.*<front> R
 
-Of course, you could use categories here.
+### i-umlaut
 
-### Environmental damage
+Using the categories previously defined:
 
-You can use otherwise unused characters to temporarily represent
-**environments**. For example, consider the following nasalisation rules
-from one of my conlangs:
+    <back>   <front>   _<cons>+<+jiÃ­Ã®>
 
-    0         ;          <vowel>_<nasal><obs>
-    0         ;          <vowel>_<nasal><liquid>
-    0         ;          <vowel>_<nasal>#
-    a|u       ä          _;
-    e|i       ë          _;
-    á|â|ú|û   ü          _;
-    é|ê|í|î   ï          _;
-    ;    0          _
+### Sievers' Law
 
-The first three rules set up the nasalisation environment, the next four
-nasalise the vowels, and the last rule removes the environment since
-it's no longer useful. Without this there would need to be twelve rules;
-ordinarily, you might think you could do this:
+This causes front vowels to appear before glides which follow heavy
+syllables:
 
-    <vowel>   <nasvow>        _<nasal>(<obs>|<liquid>|#)
+    C  = (consonants)
+    G  = wj
+    hi = ui
+    V  = (all vowels)
+    á¾»  = (long vowels)
 
-but the parentheses in `POST` would mess up the workings of the program.
-Of course, in this case you can replace the last five rules with this:
+    * CG 1{2hi}2   #|C|á¾»|VV|h_V B 
 
-    <vowel>;   {1:vowel:nasvow}        _
-
-or the whole lot with:
-
-    <vowel><nasal>   {1:vowel:nasvow}        _<obs>|<liquid>#
-
-### Spelling
-
-If the orthography and phonology of your language are related in
-predictable ways, you can use SCA to convert between them. Note that
-this sort of conversion is typically more complicated and fiddly than
-merely converting sounds, especially if you have a complicated
-orthography; this is probably where the use of one-off categories is
-most useful. The last section of **spanish.sc**, which begins with the
-comment "Spellings!", is a straightforward example. Here's another, from
-a pre-Unicoded file for Liotan; this can be converted to two lines if
-you use the appropriate mappings.
-
-    c       ty      _
-    q       dy      _
-    L       ly      _
-    ñ       ny      _
-    R       ry      _
-    x       kh      _
-    S       sh      _
-    Z       zh      _
-
-Future enhancements
--------------------
-
-These are just ideas at present and may or may not appear in future
-versions, depending on my mood and the demand. Feedback will be
-gratefully accepted.
-
-### Environments
-
-    @intervocalic  =  <vowel>_<vowel>
-
-    <stop> <fric> @intervocalic
-
-### Relations
-
-This is an attempt to build featural relations into the system.
-
-    &lenition = stop nasal -> fric nfric
-
-    &lenition   @intervocalic
-
-But is this really any better than:
-
-    <<stop,nasal>>   <<fric,nfric>>  @intervocalic
-
-?
-
-### Modifiers
-
-If you're dealing with long, short, nasal, and tonal vowels, it's
-convenient to define categories to represent these as in **ipa.sc**,
-where a particular diacritic represents a particular flavour of vowel.
-The problem is that most diacritics are only available on lower and
-uppercase `aeiouy`: there's no circumflexed `ø` in Unicode, for example,
-and the non-ASCII IPA characters like epsilon and turned-C have no
-accented variants at all. This means that if you have more than 12
-separate vowel phonemes and want to use diacritcs, you're stuck, unless
-you want to start using Greek or Cyrillic.
-
-Ideally, we'd like to use the IPA diacritics instead, so that where we
-currently have, for example, "á" for long /a:/, we'd need to use "a:"
-where ":" represents the IPA length mark at 0x02D0. However, something
-like this:
-
-    <short>   <long>   foo_bar
-
-should still work.
-
-This all suggests that SCA should recognise certain symbols as
-modifications of others. For example:
-
-    MOD long = short :
-
-would specify ":" to be a modifier of `short`, and the combination of a
-`short` plus ":" would be recognised as a `\long`. Something like the
-following could be used to spell modified categories properly, where '@'
-removes the modifier:
-
-    long   {@:short:long}   _
-
-How this would work with vowels with more than one diacritic is,
-however, not clear. If "\~" represents nasalisation, for example, should
-"a:\~" or "a\~:" represent a long nasal vowel? How would these match
-`long` and `nvowel`?
+See if you can work out why you can't use zero in `BEFORE` here.
