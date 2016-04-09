@@ -1,0 +1,180 @@
+# Geoff's Sound Change Applier version 0.5 (March 2009)
+# First created by Geoff Eddy, from an idea by Mark Rosenfelder
+# You may obtain this from http://www.cix.co.uk/~morven/lang/sc.html
+
+# This file contains sound group definitions for many IPA symbols
+# which will hopefully be convenient for someone.
+
+# You will need a Unicode font to see all of the characters
+# properly. I use the GNU intlfonts package.
+
+##############################################################################
+
+# Consonants
+
+# by manner
+
+ustop    = pṕtʈʦʧʨckqʔ
+vstop    = bḃdɖʣʤʥɟgɢ0
+ufric    = fɸθʂsʃɕçxχh
+vfric    = vβðʐzʒʑʝɣʁɦ
+nasal    = mɱnɳ000ɲŋɴ0
+nfric    = ʙṽẑ0000ĵ000
+
+sib      = sʃɕzʒʑ
+aff      = ʦʧʨʣʤʥ
+liquid   = lʎʟɭɬrɾʀɽɼŕ
+glide    = j0ɰɥ0w
+
+# by place
+
+labial   = pbfvm00 ! Yes, I know, /fv/ are labiodental and /ɸβ/ are bilabial
+labpal   = ṕḃɸβɱ00 ! but /fv/ are much more common.
+dental   = tdθðnlr
+ret      = ʈɖʂʐɳɭɽ
+alv      = ʦʣsz000
+palalv   = ʧʤʃʒ000
+alvpal   = ɕʑʨʥ000
+pal      = cɟçʝɲʎŕ
+velar    = kgxɣŋ00
+uvular   = qɢχʁɴʟʀ
+glottal  = ʔ0hɦ000
+
+imp      = ɓɗʄʠʛ
+
+dentalv  = tdsznlr
+
+# combined
+
+stop     = ustop vstop
+fric     = ufric vfric
+uobs     = ustop ufric
+vobs     = vstop vfric
+
+obs      = uobs vobs
+res      = nasal liquid
+
+notg     = obs res nfric
+cons     = notg glide
+
+##############################################################################
+
+SKIP
+
+# Vowels as per IPA
+
+# by height
+
+ufront   = iɪe0ɛæa
+ucentral = ɨ0ɘəɜɐ0
+uback    = ɯ0ɤ0ʌ0ɑ
+rfront   = yʏø0œ0ɶ
+rcentral = ʉ0ʚɵɞ00
+rback    = uʊo0ɔ0ɒ 
+
+# by height
+
+high     = iɨɯyʉu
+lhigh    = ɪ00ʏ0ʊ
+hmid     = eɘɤøɵo
+mmid     = 0ə00ʚ0
+lmid     = ɛɜʌœɞɔ
+hlow     = æɐ0000
+low      = a0ɑɶ0ɒ
+
+# combined
+
+front   = ufront rfront
+central = ucentral rcentral
+back    = uback rback
+
+NOSKIP
+
+##############################################################################
+
+# I find this set of definitions more convenient, since it lets me use
+# diacritics on vowels - Geoff
+
+# by diacritic
+
+short   = aeiouyAEIOUYæøØ
+acute   = áéíóúýÁÉÍÓÚÝǽǿǾ
+circ    = âêîôûŷÂÊÎÔÛŶ000
+grave   = àèìòùỳÀÈÌÒÙỲ000
+uml     = äëïöüÿÄËÏÖÜŸ000
+
+macron  = āēīōūȳĀĒĪŌŪȲ000
+tilde   = ãẽĩõũỹÃẼĨÕŨỸ000
+
+hat     = ȃȇȋȏȗ0ȂȆȊȎȖ0000
+dgrave  = ȁȅȉȍȕ0ȁȄȈȌȔ0000
+breve   = ăĕĭŏŭ0ĂĔĬŎŬ0000
+hachek  = ǎěǐǒǔ0ǍĚǏǑǓ0000
+ogonek  = ąęį0ų0ĄĘĮ0Ų0000
+
+vowel   = short acute circ grave uml ɨʉə
+
+# by type
+
+avow    = aáâàäã
+evow    = eéêèëẽ
+ivow    = iíîìïĩ
+ovow    = oóôòöõ
+uvow    = uúûùüũ
+yvow    = yýŷỳÿỹ
+
+Avow    = AÁÂÀÄÃ
+Evow    = EÉÊÈËẼ
+Ivow    = IÍÎÌÏĨ
+Ovow    = OÓÔÒÖÕ
+Uvow    = UÚÛÙÜŨ
+Yvow    = YÝŶỲŸỸ
+
+ævow    = æǽ0000
+øvow    = øǿ0000
+Øvow    = ØǾ0000
+
+# by height
+
+high    = ivow uvow yvow
+mid     = evow ovow øvow
+lowmid  = Evow Ovow Øvow
+low     = ævow avow Avow
+nothi   = mid lmid low
+hi      = iɨɯyʉu
+
+funround = ivow Ivow evow Evow
+back     = uvow Uvow ovow Ovow
+fround   = yvow Yvow øvow Øvow
+
+front   = funround fround
+round   = back fround
+
+notfront = back avow
+notback = front avow
+
+##############################################################################
+
+# handy shorthands; YMMV
+
+V = vowel
+C = cons
+N = nasal
+L = liquid
+G = glide
+T = stop
+F = fric
+
+P = labial
+Ṕ = labpal
+K = velar
+Q = uvular
+S = sib
+
+Ᾰ = short
+Ά = acute
+Ὰ = grave
+Ᾱ = circ
+ᾶ = tilde
+
+##############################################################################
