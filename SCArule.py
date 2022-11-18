@@ -32,7 +32,7 @@ class SCARulePart:
 
         L = list(s)
 
-        while len(L) > 0: self.doNext(L)
+        while L: self.doNext(L)
 
         self.addLast()
 
@@ -90,9 +90,7 @@ class SCARulePart:
 
     """ Backslashes escape the following character. """
     def add_escape(self, c, L, H):
-        if len(L) == 0: c = ' '
-        else:           c = L.pop(0)
-
+        c = ' ' if len(L) == 0 else L.pop(0)
         if c in '.|?+*<[{%#': c = '\\' + c
         elif c == '\\': c += c
 
@@ -156,31 +154,28 @@ class SCARulePart:
 
     """ Debugging function. """
     def showDetailed(self, header):
-        print header
-        for I in self.items: print "   ", I
+        def showDetailed(self, header):
+        for _ in self.items:
+            for I in self.items: print "   ", I
 
     """ Return the _i_'th item in this part; _i_ may be negative. Note
     that the first item is at index 1, not 0, since 0 means 'zero'.
     """
     def __getitem__(self, i):
-        if i < 0: return self.items[i]
-        return self.items[i - 1]
+        return self.items[i] if i < 0 else self.items[i - 1]
 
     """ How many itenms are in this part? """
     def __len__(self): return len(self.items)
 
     """ Colour a character if necessary. """
     def colourChar(self, c):
-        if c not in "<>[]|#%+*?$`": return c
-        return cols(c, 33)
+        return c if c not in "<>[]|#%+*?$`" else cols(c, 33)
 
     """ Return the representation of this string, as text if b is True
     and as a regexp otherwise, with special characters coloured.
     """
     def colour(self, b):
-        if b: s = self.text
-        else: s = self.getRexp()
-
+        s = self.text if b else self.getRexp()
         return "".join([self.colourChar(c) for c in s])
 
 """ This class is used for BEFORE and AFTER, which require more
@@ -194,7 +189,7 @@ class SCAMatchingRulePart(SCARulePart):
         self.re = None
 
         if before:
-            rexp = "".join(["(%s)" % I.getRexp() for I in self.items])
+            rexp = "".join([f"({I.getRexp()})" for I in self.items])
             self.re = re.compile(rexp)
 
     """ Convert the text which matches to a single item.
@@ -214,12 +209,13 @@ class SCAMatchingRulePart(SCARulePart):
         if n < 0: n += m.lastindex
         else:     n -= 1
 
-        if len(m.groups()) > 0:
-            old = m.groups()[n]
-        else:
+        old = m.groups()[n] if len(m.groups()) > 0 else ""
             old = ""
 
         if verbose: print cols(old, 33)
+
+        s = I.convert(R, old, groups, m.groups())
+        return self.parent.sca.evaluate(s)
 
         s = I.convert(R, old, groups, m.groups())
         return self.parent.sca.evaluate(s)
@@ -288,16 +284,16 @@ class SCARule:
 
         if t[0] == '`':
             if t[1] == '@':
-                before, after = sca.getRule(t[2:]).orig[0:2]
+                before, after = sca.getRule(t[2:]).orig[:2]
             else:
                 before, after = sca.findDef('change', t[1:])
         else:
             before = t
-            
+
             if len(L) == 0: raise SCAException("No AFTER part given")
 
             after = L.pop(0)
-            
+
         if len(L) == 0: raise SCAException("No ENV part given")
 
         env = L.pop(0)
@@ -336,20 +332,17 @@ class SCARule:
 
         # Compile everything
 
-        self.orig   = (before, after, pre + "_" + post)
+        self.orig = before, after, f"{pre}_{post}"
         self.pre    = SCARulePart(self, "^", pre)
         self.post   = SCARulePart(self, "$", post)
         self.before = SCAMatchingRulePart(self, before, True)
         self.after  = SCAMatchingRulePart(self, after,  False)
 
-        self.rexp = "".join(["(%s)" % P.getExtRexp()
-                            for P in self.pre, self.before, self.post])
+        self.rexp = "".join([f"({P.getExtRexp()})" for P in self.pre])
 
         if verbose:
             for i in ["before", "after", "pre", "post"]:
                 getattr(self, i).showDetailed(i)
-            print "Rexp:", self.rexp
-
         for I in self.after: I.validate(verbose)
 
         self.parts = (self.before, self.after, self.pre, self.post)
@@ -392,8 +385,7 @@ class SCARule:
     default.
     """
     def getPart(self, i):
-        if i is None: return self.before
-        return [self.pre, self.before, self.post][i]
+        return self.before if i is None else [self.pre, self.before, self.post][i]
 
     """ Return value _n_ from part _i_ as in getPart(). An exception
     is thrown if value _n_ does not exist or is not indexable.
@@ -424,8 +416,8 @@ class SCARule:
 
     """ Return a sensible textual representataion of the rule. """
     def getText(self):
-            T = tuple([P.getText() for P in self.parts])
-            return "%s -> %s / %s_%s" % T
+        T = tuple(P.getText() for P in self.parts)
+        return "%s -> %s / %s_%s" % T
 
     """ Apply this rule to _word_ in dialect _d_, subject to exceptions
     in _E_. The return value is a tuple of a number and a string:
@@ -524,8 +516,8 @@ class SCARule:
         L = [ s.colour(b) for s in self.parts ]
 
         return L[0] + cols(" -> ", 36, c) +\
-               L[1] + cols(" / ",  36, c) +\
-               L[2] + cols("_",  36, c) + L[3]
+                   L[1] + cols(" / ",  36, c) +\
+                   L[2] + cols("_",  36, c) + L[3]
 
 ##############################################################################
 
@@ -588,10 +580,8 @@ class SCAGroupParams(dict):
             if value[0] == '&':
                 name, default = value[1:].split(":")
 
-                if name in clparams: value = clparams[name]
-                else: value = default
-
-            f = getattr(self, "get" + T[0])
+                value = clparams[name] if name in clparams else default
+            f = getattr(self, f"get{T[0]}")
             if f is None:
                 raise SCAException("Unknown parameter type '%s'" % T[0])
 
@@ -698,7 +688,7 @@ class SCARuleGroup:
     def process(self, H, E, P, **extras):
         n, m = 0, self.params["max"]
 
-        for i in range(self.params["times"]):
+        for _ in range(self.params["times"]):
             if not self.proceed("prob"): continue
 
             if self.params["shuffle"]: random.shuffle(self.rules)
@@ -727,8 +717,8 @@ class SCARuleGroup:
     enc: the encoding to use
     """
     def showRules(self, enc):
-        print "*** Group %s ***" % self.name
-
-        for R in self.rules: print R.text.encode(enc)
+        def showRules(self, enc):
+        for _ in self.rules:
+            for R in self.rules: print R.text.encode(enc)
 
 ##############################################################################

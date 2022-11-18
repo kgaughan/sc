@@ -161,9 +161,7 @@ class SCApplier():
 
             word = L[incol]
 
-            if outcol is None: label = ""
-            else:              label = " (" + L[outcol] + ")"
-
+            label = "" if outcol is None else f" ({L[outcol]})"
             H = S.process(word, self.dialects)
 
             for i, d in enumerate(header):
@@ -171,16 +169,16 @@ class SCApplier():
                 if d == "in" or H[d] == L[i]: continue
 
                 if self.opts.colour:
-                    t  = cols(word, 35) + " in " + cols(d, 32)
-                    t += " at line " + cols(n, 36)
+                    t = f"{cols(word, 35)} in {cols(d, 32)}"
+                    t += f" at line {cols(n, 36)}"
                     t += cols(label, 34)
-                    t += ": expected " + cols(L[i], 33)
-                    t += "; got " + cols(H[d], 31)
+                    t += f": expected {cols(L[i], 33)}"
+                    t += f"; got {cols(H[d], 31)}"
                 else:
                     t  = "'%s' in '%s' %s: expected '%s', got '%s'" %\
-                         (word, d, label, L[i], H[d])
-               
-                print t.encode(self.opts.encoding)
+                             (word, d, label, L[i], H[d])
+
+                if i == outcol: continue
 
     """ Callback which handles definitions with '-D'. """
     def define(self, option, opt, value, parser, *args, **kwargs):
@@ -216,7 +214,9 @@ class SCApplier():
         if self.opts.level <= n: return
 
         s = "#=-"[n] * 8
-        s = s + " " + word + " " + s
+        s = f"{s} {word} {s}"
+
+        if self.opts.level <= n: return
 
         print cols(s, 45, self.opts.colour)
 
@@ -231,7 +231,7 @@ class SCApplier():
     """
     def showCommon(self, b, rule, d, n, word, w, p):
         if d is None: self.showHeading(n, word); return
-            
+
         if word == w and not self.opts.all: return
 
         s = ""
@@ -239,7 +239,7 @@ class SCApplier():
         if self.opts.showlines: s += "[%4d] " % rule.line
 
         if self.opts.colour:
-            s += cols(d, 32) + " "
+            s += f"{cols(d, 32)} "
 
             if n == 2: c = 33 # exception
             elif self.opts.all and word == w: c = 0 # no change
@@ -248,11 +248,10 @@ class SCApplier():
 
             s += cols(w, c) + " " * (20 - len(w))
         else:
-            if n == 2: s += "%s: %-20s" % (d, w + " *")
-            else:      s += "%s: %-20s" % (d, w)
-
+            s += "%s: %-20s" % (d, f"{w} *") if n == 2 else "%s: %-20s" % (d, w)
         s += rule.getShowText(b, self.opts.colour)
 
+        if d is None: self.showHeading(n, word)
         print s.strip().encode(self.opts.encoding)
 
     """ Print the starting banner and definition counts.
@@ -266,14 +265,14 @@ class SCApplier():
         L = [s1, s2, banner, info1.center(n), info2.center(n), s2, s1]
 
         for s in L:
-            sys.stderr.write(cols("* " + s + " *\n", 44, self.opts.colour))
+            sys.stderr.write(cols(f"* {s}" + " *\n", 44, self.opts.colour))
 
         if self.opts.lexfile:
             sys.stderr.write("\nProcessing %s with %s.\n" % \
-                  (self.opts.lexfile, self.opts.scfile))
+                      (self.opts.lexfile, self.opts.scfile))
         elif self.opts.testfile:
             sys.stderr.write("\nTesting %s with %s.\n" % \
-                  (self.opts.testfile, self.opts.scfile))
+                      (self.opts.testfile, self.opts.scfile))
         else:
             sys.stderr.write("\nUsing " + self.opts.scfile + ".\n")
 

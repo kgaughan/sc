@@ -14,8 +14,7 @@ import codecs
 
 class SCAException(Exception):
     def __init__(self, s, *args):
-        if len(args) == 0: self.s = s
-        else:              self.s = s % args
+        self.s = s % args if args else s
 
     def __repr__(self): return self.s
 
@@ -30,15 +29,13 @@ decremented by 1. So:
 
 def stripInt(s):
     if len(s) == 0: return "", None
-    
+
     t = ""
 
     if s[0] == '-':         t += s[0]; s = s[1:]
     if s[0] in '123456789': t += s[0]; s = s[1:]
 
-    if t == '': return s, None
-
-    return s, int(t)
+    return (s, None) if t == '' else (s, int(t))
 
 """ Add an ANSI colour codes to a string so that it wil be printed in
 colour.
@@ -48,8 +45,7 @@ b: True to actually add the colours, False to leave the string alone
 """
 
 def cols(s, n, b = True):
-    if not b: return s
-    return "\033[1;%dm%s\033[0m" % (n, s)
+    return "\033[1;%dm%s\033[0m" % (n, s) if b else s
 
 """ Read from a file and yield each line in turn with its number,
 subject to the following:
@@ -91,16 +87,12 @@ this will have to do for now.
 """
 
 def escapedSplit(s, delim = None, n = None, esc = '\\'):
-    if delim is None: sep = ' '
-    else:             sep = delim
-
-    if n is None: L = s.split(delim)
-    else:         L = s.split(delim, n)
-
+    sep = ' ' if delim is None else delim
+    L = s.split(delim) if n is None else s.split(delim, n)
     a = []
 
     for t in L:
-        if len(a) > 0 and a[-1][-1] == esc:
+        if a and a[-1][-1] == esc:
             a[-1] = a[-1][:-1] + sep + t
         else:
             a.append(t)

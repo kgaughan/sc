@@ -50,9 +50,9 @@ class SCADefinition():
 
     """ Show all current definitions. """
     def showDefs(self):
-        print "\nCurrent definitions for '%s':" % self.name
-        for name in sorted(self.defs.keys()):
-            print "  %s -> '%s'" % (name, self.defs[name])
+        def showDefs(self):
+        for _ in sorted(self.defs.keys()):
+            for name in sorted(self.defs.keys()):
         print
 
     """ How many definitions do we have? """
@@ -75,8 +75,7 @@ class SCACatDefinition(SCADefinition):
     _name_.
     """
     def getIfDefined(self, name):
-        if self.has(name): return self.get(name)
-        return name
+        return self.get(name) if self.has(name) else name
 
     def parse(self, s):
         chars = ""
@@ -86,14 +85,14 @@ class SCACatDefinition(SCADefinition):
                 chars += self.getIfDefined(name)
                 continue
 
-            n = sum([1 for c in name if self.has(c)])
+            n = sum(1 for c in name if self.has(c))
 
             if n == 0: chars += name; continue
 
             if n != len(name):
                 raise SCAException("Not all categories in '%s' are defined",
                                    name)
-                
+
             for t in name: chars += self.get(t)
 
         return chars
@@ -274,10 +273,7 @@ class SCA():
     def evaluate(self, s):
         if s == '': return ''
 
-        if s[0] == '$':
-            return self.evaluate(self.getDef("string", s[1:]))
-
-        return s
+        return self.evaluate(self.getDef("string", s[1:])) if s[0] == '$' else s
 
     """ Convert a category specfication in _cat_ to a list of symbols
     which will be used in a regexp. For example, if 'A' is defined as
@@ -304,7 +300,8 @@ class SCA():
             if s == '^' and first: comp, first = True, False; continue
             if s == '+': add, first = True,  False; continue
             if s == '-':
-                if first and len(L) == 1: return "^" + L[0]
+                if first and len(L) == 1:
+                    return f"^{L[0]}"
                 add, first = False, False
                 continue
 
@@ -323,9 +320,7 @@ class SCA():
 
         s = "".join(chars)
 
-        if comp: return "^" + s
-
-        return s
+        return f"^{s}" if comp else s
 
     ######################################################################
 
@@ -338,7 +333,7 @@ class SCA():
         name = L.pop(0)
 
         try:
-            f = getattr(self, "dir_" + name)
+            f = getattr(self, f"dir_{name}")
         except AttributeError:
             raise SCAException("Unknown directive '%s'", name)
 
@@ -383,8 +378,7 @@ class SCA():
                 raise SCAException("Parameter '%s' not given for '%s'",
                                    p, name)
 
-            if p in Hparams: v = Hparams[p]
-
+            v = Hparams[p]
             if v is None:
                 raise SCAException("No value for parameter '%s' in '%s'",
                                    param, name)
@@ -392,7 +386,7 @@ class SCA():
             H[p] = v
             del Hparams[p]
 
-        for k in Hparams.keys():
+        for k in Hparams:
             raise SCAException("Unknown parameter '%s' in '%s'", k, name)
 
         return H
@@ -508,8 +502,9 @@ class SCA():
         if L[0] in self.defs:
             self.addDef(L[0], L[1], " ".join(L[2:]))
             return
-        
-        if len(self.dp) > 0: s = self.dp + " " + s
+
+        if len(self.dp) > 0:
+            s = f"{self.dp} {s}"
 
         R = SCARule(self, f, n, s, self.lastrule) #, verbose)
 
@@ -562,12 +557,9 @@ class SCA():
     def process(self, word, dialects = None, **extras):
         if dialects is None: dialects = self.dialects
 
-        H = { }
-
         self.setLastWord(word)
 
-        for d in dialects: H[d] = word
-
+        H = {d: word for d in dialects}
         self.main.process(H, self.exceptions, self.persistent, **extras)
 
         return H

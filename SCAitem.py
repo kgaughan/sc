@@ -81,16 +81,14 @@ class SCAItem:
 
     """ How should this item be displayed to the user as a regexp? """
     def getRexp(self):
-        if self.rexp: return self.rexp
-        return ""
+        return self.rexp or ""
 
     """ Return the external regexp if we have one, otherwise the
     normal regexp. This is used when building the regexp for the
     entire rule, when we can use '\1'.
     """
     def getExtRexp(self):
-        if self.extrexp: return self.extrexp
-        return self.getRexp()
+        return self.extrexp or self.getRexp()
 
     """ How many sub-items are in this item?
     This is only meaningful for lists and categories.
@@ -112,15 +110,14 @@ class SCAItem:
     one with the same index.
     """
     def getRef(self):
-        if self.ref is not None: return self.ref
-        return self.index + 1
+        return self.ref if self.ref is not None else self.index + 1
 
     """ Does this item refer to a valid item in BEFORE? This traps
     unworkable changes like 'a <cat>' and 'foo 2'.
     """
     def validateRef(self, p, ref, checkLen, verbose):
         if p is None: p = 1
-        
+
         s    = ["PRE", "BEFORE", "POST"][p]
         part = self.parent.getPart(p)
         n    = len(part)
@@ -175,7 +172,8 @@ class SCAString(SCAItem):
         SCAItem.__init__(self, "string", *args)
 
     """ We refer to strings with their names, not their values. """
-    def compileText(self, s): return "$" + s + "$"
+    def compileText(self, s):
+        return f"${s}$"
 
     """ But the regexp needs the value, which must exist and may need
     to be escaped.
@@ -247,9 +245,7 @@ class SCAVector(SCAItem):
         return self.makeList(self.values, *self.getRexpDelims()) + self.quants
 
     def convert(self, R, s, *args):
-        if self.random: n = random.randrange(len(self))
-        else: n = R[self.ref].find(s)
-
+        n = random.randrange(len(self)) if self.random else R[self.ref].find(s)
         if n >= len(self): return ""
         ret = self.values[n]
         if ret == '0': ret = ''
@@ -354,8 +350,7 @@ class SCAList(SCAVector):
                 self.values.append(t)
 
     def getExtRexp(self):
-        if self.extrexp: return self.extrexp
-        return self.getRexp()
+        return self.extrexp or self.getRexp()
 
 ##############################################################################
 
@@ -410,9 +405,7 @@ class SCABlend(SCAItem):
         else:
             p, i = m.groups()
 
-            if len(i) == 0: index = self.index + 1
-            else:           index = int(i)
-
+            index = self.index + 1 if len(i) == 0 else int(i)
             if   p == "<": part = 0
             elif p == ">": part = 2
             else:          part = 1
